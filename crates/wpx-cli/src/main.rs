@@ -204,7 +204,51 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
                 summary: None,
             })
         }
+        Commands::Man { dir } => {
+            let cmd = Cli::command();
+            if let Some(dir) = dir {
+                // Generate all man pages to a directory
+                std::fs::create_dir_all(&dir).map_err(|e| WpxError::Other(e.to_string()))?;
+                generate_man_pages(&cmd, &dir)?;
+                Ok(RenderPayload {
+                    data: serde_json::json!({"status": "generated", "directory": dir}),
+                    summary: Some(format!("Man pages generated in {dir}/")),
+                })
+            } else {
+                // Print main man page to stdout
+                let man = clap_mangen::Man::new(cmd);
+                let mut buf = Vec::new();
+                man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+                std::io::Write::write_all(&mut std::io::stdout(), &buf)
+                    .map_err(|e| WpxError::Other(e.to_string()))?;
+                Ok(RenderPayload {
+                    data: serde_json::Value::Null,
+                    summary: None,
+                })
+            }
+        }
     }
+}
+
+fn generate_man_pages(cmd: &clap::Command, dir: &str) -> Result<(), WpxError> {
+    // Main page
+    let man = clap_mangen::Man::new(cmd.clone());
+    let mut buf = Vec::new();
+    man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+    let path = format!("{dir}/wpx.1");
+    std::fs::write(&path, &buf).map_err(|e| WpxError::Other(e.to_string()))?;
+
+    // Subcommand pages
+    for sub in cmd.get_subcommands() {
+        let name = sub.get_name();
+        let man = clap_mangen::Man::new(sub.clone());
+        let mut buf = Vec::new();
+        man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+        let path = format!("{dir}/wpx-{name}.1");
+        std::fs::write(&path, &buf).map_err(|e| WpxError::Other(e.to_string()))?;
+    }
+
+    Ok(())
 }
 
 fn init_tracing(verbose: bool, quiet: bool) {

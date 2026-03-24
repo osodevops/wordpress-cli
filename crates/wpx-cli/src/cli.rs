@@ -283,6 +283,14 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: clap_complete::Shell,
     },
+
+    /// Generate man pages.
+    #[command(name = "man")]
+    Man {
+        /// Output directory for man pages (default: stdout for main page).
+        #[arg(long)]
+        dir: Option<String>,
+    },
 }
 
 /// MCP server subcommands.
