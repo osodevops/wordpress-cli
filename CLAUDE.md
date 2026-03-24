@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-wpx is a Rust-native WordPress CLI designed for both AI agents and humans. It manages WordPress sites remotely via the REST API, producing structured machine-readable output (JSON) when piped and human-readable tables when run interactively. The tool is organized as a Cargo workspace of six crates, supports multi-site fleet management, and authentication via WordPress application passwords and OAuth 2.1 with PKCE.
+wpx is a Rust-native WordPress CLI designed for both AI agents and humans. Inspired by [WP-CLI](https://github.com/wp-cli/wp-cli), but built from the ground up because AI agents shouldn't need PHP to manage WordPress -- wpx communicates purely via the WordPress REST API as a single static binary with zero runtime dependencies. It produces structured machine-readable output (JSON) when piped and human-readable tables when run interactively. The tool is organized as a Cargo workspace of six crates, supports multi-site fleet management, and authentication via WordPress application passwords and OAuth 2.1 with PKCE.
 
 ## Build & Test
 

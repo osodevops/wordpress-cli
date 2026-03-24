@@ -4,7 +4,11 @@
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2021-orange.svg)](https://www.rust-lang.org/)
 
-Rust-native CLI for managing WordPress sites remotely via the REST API. Designed agent-first: structured JSON output, schema introspection, and semantic exit codes let AI agents operate WordPress programmatically. Designed human-friendly: auto-detecting table output, colored terminals, and shell completions make it pleasant for interactive use. Zero runtime dependencies -- single static binary, no PHP or SSH required.
+Rust-native CLI for managing WordPress sites remotely via the REST API. Inspired by [WP-CLI](https://github.com/wp-cli/wp-cli), but built from the ground up for AI agents -- because agents shouldn't need PHP installed to manage a WordPress site.
+
+WP-CLI requires a local PHP runtime, a bootstrapped WordPress installation, and SSH access to run. That's fine for humans on a server, but it's a non-starter for AI coding agents like Claude, Cursor, or Codex that operate remotely over HTTPS. **wpx** solves this by communicating purely via the WordPress REST API as a single static binary with zero runtime dependencies.
+
+Designed agent-first: structured JSON output, schema introspection, and semantic exit codes let AI agents operate WordPress programmatically. Designed human-friendly: auto-detecting table output, colored terminals, and shell completions make it pleasant for interactive use.
 
 ## Features
 
