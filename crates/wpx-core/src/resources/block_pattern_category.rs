@@ -13,8 +13,7 @@ impl Resource for BlockPatternCategory {
     const NAME: &'static str = "block-pattern-category";
     const NAME_PLURAL: &'static str = "block pattern categories";
     const API_PATH: &'static str = "wp/v2/block-patterns/categories";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["name", "label"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["name", "label"];
 }
 
 #[cfg(test)]
@@ -37,6 +36,9 @@ mod tests {
     #[test]
     fn resource_trait_constants() {
         assert_eq!(BlockPatternCategory::NAME, "block-pattern-category");
-        assert_eq!(BlockPatternCategory::API_PATH, "wp/v2/block-patterns/categories");
+        assert_eq!(
+            BlockPatternCategory::API_PATH,
+            "wp/v2/block-patterns/categories"
+        );
     }
 }

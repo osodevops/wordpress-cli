@@ -36,8 +36,7 @@ pub async fn dispatch(
         ["post", "delete"] => {
             let id = args_id(args)?;
             let force = args.get("force").and_then(|v| v.as_bool()).unwrap_or(false);
-            crate::crud::delete::<wpx_core::resources::post::Post>(client, id, force, dry_run)
-                .await
+            crate::crud::delete::<wpx_core::resources::post::Post>(client, id, force, dry_run).await
         }
 
         // Pages
@@ -58,8 +57,7 @@ pub async fn dispatch(
         ["page", "delete"] => {
             let id = args_id(args)?;
             let force = args.get("force").and_then(|v| v.as_bool()).unwrap_or(false);
-            crate::crud::delete::<wpx_core::resources::page::Page>(client, id, force, dry_run)
-                .await
+            crate::crud::delete::<wpx_core::resources::page::Page>(client, id, force, dry_run).await
         }
 
         // Users
@@ -73,8 +71,8 @@ pub async fn dispatch(
         ["user", "me"] => {
             let resp: wpx_api::ApiResponse<wpx_core::resources::user::User> =
                 client.get("wp/v2/users/me", &[("context", "edit")]).await?;
-            let data = serde_json::to_value(&resp.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&resp.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: None,
@@ -100,9 +98,7 @@ pub async fn dispatch(
         }
 
         // Tags
-        ["tag", "list"] => {
-            crate::crud::list::<wpx_core::resources::tag::Tag>(client, args).await
-        }
+        ["tag", "list"] => crate::crud::list::<wpx_core::resources::tag::Tag>(client, args).await,
         ["tag", "get"] => {
             let id = args_id(args)?;
             crate::crud::get::<wpx_core::resources::tag::Tag>(client, id).await
@@ -143,7 +139,10 @@ pub async fn dispatch(
         }
         ["plugin", "install"] => {
             let slug = args_str(args, "slug")?;
-            let activate = args.get("activate").and_then(|v| v.as_bool()).unwrap_or(false);
+            let activate = args
+                .get("activate")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let status = if activate { "active" } else { "inactive" };
             let body = json!({"slug": slug, "status": status});
             let resp: wpx_api::ApiResponse<Value> = client.post("wp/v2/plugins", &body).await?;
@@ -207,8 +206,7 @@ pub async fn dispatch(
 
         // Settings
         ["settings", "list"] | ["option", "list"] => {
-            let resp: wpx_api::ApiResponse<Value> =
-                client.get("wp/v2/settings", &[]).await?;
+            let resp: wpx_api::ApiResponse<Value> = client.get("wp/v2/settings", &[]).await?;
             Ok(RenderPayload {
                 data: resp.data,
                 summary: None,
@@ -216,12 +214,15 @@ pub async fn dispatch(
         }
         ["settings", "get"] | ["option", "get"] => {
             let key = args_str(args, "key")?;
-            let resp: wpx_api::ApiResponse<Value> =
-                client.get("wp/v2/settings", &[]).await?;
-            let value = resp.data.get(&key).cloned().ok_or_else(|| WpxError::NotFound {
-                resource: "setting".into(),
-                id: key.clone(),
-            })?;
+            let resp: wpx_api::ApiResponse<Value> = client.get("wp/v2/settings", &[]).await?;
+            let value = resp
+                .data
+                .get(&key)
+                .cloned()
+                .ok_or_else(|| WpxError::NotFound {
+                    resource: "setting".into(),
+                    id: key.clone(),
+                })?;
             Ok(RenderPayload {
                 data: json!({ key: value }),
                 summary: None,
@@ -229,13 +230,9 @@ pub async fn dispatch(
         }
         ["settings", "set"] | ["option", "set"] => {
             let key = args_str(args, "key")?;
-            let value = args
-                .get("value")
-                .cloned()
-                .unwrap_or(Value::Null);
+            let value = args.get("value").cloned().unwrap_or(Value::Null);
             let body = json!({ key.clone(): value });
-            let resp: wpx_api::ApiResponse<Value> =
-                client.post("wp/v2/settings", &body).await?;
+            let resp: wpx_api::ApiResponse<Value> = client.post("wp/v2/settings", &body).await?;
             Ok(RenderPayload {
                 data: resp.data,
                 summary: Some(format!("Setting '{key}' updated")),
@@ -243,12 +240,9 @@ pub async fn dispatch(
         }
 
         // Auth
-        ["auth", "list"] => commands::auth::handle(
-            &crate::cli::AuthCommands::List,
-            "default",
-            None,
-        )
-        .await,
+        ["auth", "list"] => {
+            commands::auth::handle(&crate::cli::AuthCommands::List, "default", None).await
+        }
         ["auth", "test"] => {
             commands::auth::handle(&crate::cli::AuthCommands::Test, "default", None).await
         }

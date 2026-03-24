@@ -115,12 +115,14 @@ pub async fn handle(
     match command {
         WidgetCommands::List(args) => {
             let query = crud::to_query_params(args);
-            let query_refs: Vec<(&str, &str)> =
-                query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let query_refs: Vec<(&str, &str)> = query
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
             let response: wpx_api::ApiResponse<Vec<Widget>> =
                 client.get("wp/v2/widgets", &query_refs).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             let total = response.total.unwrap_or(response.data.len() as u64);
             Ok(RenderPayload {
                 data,
@@ -130,8 +132,8 @@ pub async fn handle(
         WidgetCommands::Get { id } => {
             let path = format!("wp/v2/widgets/{id}");
             let response: wpx_api::ApiResponse<Widget> = client.get(&path, &[]).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: None,
@@ -140,8 +142,8 @@ pub async fn handle(
         WidgetCommands::Create(args) => {
             let params = args.to_params()?;
             if dry_run {
-                let body_value = serde_json::to_value(&params)
-                    .map_err(|e| WpxError::Other(e.to_string()))?;
+                let body_value =
+                    serde_json::to_value(&params).map_err(|e| WpxError::Other(e.to_string()))?;
                 return Ok(RenderPayload {
                     data: json!({
                         "dry_run": true,
@@ -154,8 +156,8 @@ pub async fn handle(
             }
             let response: wpx_api::ApiResponse<Widget> =
                 client.post("wp/v2/widgets", &params).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some("widget created".into()),
@@ -164,8 +166,8 @@ pub async fn handle(
         WidgetCommands::Update { id, args } => {
             let params = args.to_params()?;
             if dry_run {
-                let body_value = serde_json::to_value(&params)
-                    .map_err(|e| WpxError::Other(e.to_string()))?;
+                let body_value =
+                    serde_json::to_value(&params).map_err(|e| WpxError::Other(e.to_string()))?;
                 return Ok(RenderPayload {
                     data: json!({
                         "dry_run": true,
@@ -178,10 +180,9 @@ pub async fn handle(
                 });
             }
             let path = format!("wp/v2/widgets/{id}");
-            let response: wpx_api::ApiResponse<Widget> =
-                client.post(&path, &params).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let response: wpx_api::ApiResponse<Widget> = client.post(&path, &params).await?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some(format!("widget {id} updated")),

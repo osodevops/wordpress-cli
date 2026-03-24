@@ -22,9 +22,7 @@ pub async fn handle(
     client: &WpClient,
 ) -> Result<RenderPayload, WpxError> {
     match command {
-        BlockTypeCommands::List => {
-            crud::list::<BlockType>(client, &serde_json::json!({})).await
-        }
+        BlockTypeCommands::List => crud::list::<BlockType>(client, &serde_json::json!({})).await,
         BlockTypeCommands::Get { name } => {
             crud::get_by_slug::<BlockType>(client, "wp/v2/block-types", name).await
         }

@@ -22,9 +22,7 @@ pub async fn handle(
     client: &WpClient,
 ) -> Result<RenderPayload, WpxError> {
     match command {
-        WidgetTypeCommands::List => {
-            crud::list::<WidgetType>(client, &serde_json::json!({})).await
-        }
+        WidgetTypeCommands::List => crud::list::<WidgetType>(client, &serde_json::json!({})).await,
         WidgetTypeCommands::Get { id } => {
             crud::get_by_slug::<WidgetType>(client, "wp/v2/widget-types", id).await
         }

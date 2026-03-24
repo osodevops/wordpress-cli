@@ -163,8 +163,8 @@ pub async fn handle(
             let path = format!("wp/v2/block-directory/search?term={term}");
             let response: wpx_api::ApiResponse<Vec<serde_json::Value>> =
                 client.get(&path, &[]).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             let count = response.data.len();
             Ok(RenderPayload {
                 data,

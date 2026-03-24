@@ -14,8 +14,7 @@ impl Resource for WidgetType {
     const NAME: &'static str = "widget-type";
     const NAME_PLURAL: &'static str = "widget types";
     const API_PATH: &'static str = "wp/v2/widget-types";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["id", "name", "is_multi"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["id", "name", "is_multi"];
 }
 
 #[cfg(test)]

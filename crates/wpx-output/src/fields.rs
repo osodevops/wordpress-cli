@@ -7,9 +7,11 @@ use serde_json::Value;
 /// For other types: returns as-is.
 pub fn apply_field_mask(value: Value, fields: &[String]) -> Value {
     match value {
-        Value::Array(arr) => {
-            Value::Array(arr.into_iter().map(|v| apply_field_mask(v, fields)).collect())
-        }
+        Value::Array(arr) => Value::Array(
+            arr.into_iter()
+                .map(|v| apply_field_mask(v, fields))
+                .collect(),
+        ),
         Value::Object(map) => {
             let filtered = map
                 .into_iter()
@@ -28,7 +30,8 @@ mod tests {
 
     #[test]
     fn filter_object_fields() {
-        let value = json!({"id": 1, "title": "Hello", "status": "publish", "content": "<p>...</p>"});
+        let value =
+            json!({"id": 1, "title": "Hello", "status": "publish", "content": "<p>...</p>"});
         let filtered = apply_field_mask(value, &["id".into(), "title".into()]);
         assert_eq!(filtered, json!({"id": 1, "title": "Hello"}));
     }

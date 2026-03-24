@@ -22,9 +22,7 @@ pub async fn handle(
     client: &WpClient,
 ) -> Result<RenderPayload, WpxError> {
     match command {
-        SidebarCommands::List => {
-            crud::list::<Sidebar>(client, &serde_json::json!({})).await
-        }
+        SidebarCommands::List => crud::list::<Sidebar>(client, &serde_json::json!({})).await,
         SidebarCommands::Get { id } => {
             crud::get_by_slug::<Sidebar>(client, "wp/v2/sidebars", id).await
         }

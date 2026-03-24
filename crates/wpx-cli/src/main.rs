@@ -143,30 +143,32 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
         }
 
         // MCP server
-        Commands::Mcp { command } => {
-            match command {
-                cli::McpCommands::Serve { transport, port: _ } => {
-                    if transport != "stdio" {
-                        return Err(WpxError::Other(
+        Commands::Mcp { command } => match command {
+            cli::McpCommands::Serve { transport, port: _ } => {
+                if transport != "stdio" {
+                    return Err(WpxError::Other(
                             "Only 'stdio' transport is currently supported. SSE/HTTP transport coming soon.".into()
                         ));
-                    }
-                    wpx_mcp::serve_stdio(&cli.global.site).await?;
-                    Ok(RenderPayload {
-                        data: serde_json::Value::Null,
-                        summary: None,
-                    })
                 }
+                wpx_mcp::serve_stdio(&cli.global.site).await?;
+                Ok(RenderPayload {
+                    data: serde_json::Value::Null,
+                    summary: None,
+                })
             }
-        }
+        },
 
         // Discover site capabilities (no auth needed)
         Commands::Discover { url } => {
             let base_url = url::Url::parse(url).map_err(|e| WpxError::Config {
                 message: format!("Invalid URL: {e}"),
             })?;
-            let client =
-                wpx_api::WpClient::new(base_url, Box::new(wpx_auth::NoAuth), cli.global.timeout, 0)?;
+            let client = wpx_api::WpClient::new(
+                base_url,
+                Box::new(wpx_auth::NoAuth),
+                cli.global.timeout,
+                0,
+            )?;
             commands::discover::handle(&client).await
         }
 
@@ -218,7 +220,8 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
                 // Print main man page to stdout
                 let man = clap_mangen::Man::new(cmd);
                 let mut buf = Vec::new();
-                man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+                man.render(&mut buf)
+                    .map_err(|e| WpxError::Other(e.to_string()))?;
                 std::io::Write::write_all(&mut std::io::stdout(), &buf)
                     .map_err(|e| WpxError::Other(e.to_string()))?;
                 Ok(RenderPayload {
@@ -234,7 +237,8 @@ fn generate_man_pages(cmd: &clap::Command, dir: &str) -> Result<(), WpxError> {
     // Main page
     let man = clap_mangen::Man::new(cmd.clone());
     let mut buf = Vec::new();
-    man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+    man.render(&mut buf)
+        .map_err(|e| WpxError::Other(e.to_string()))?;
     let path = format!("{dir}/wpx.1");
     std::fs::write(&path, &buf).map_err(|e| WpxError::Other(e.to_string()))?;
 
@@ -243,7 +247,8 @@ fn generate_man_pages(cmd: &clap::Command, dir: &str) -> Result<(), WpxError> {
         let name = sub.get_name();
         let man = clap_mangen::Man::new(sub.clone());
         let mut buf = Vec::new();
-        man.render(&mut buf).map_err(|e| WpxError::Other(e.to_string()))?;
+        man.render(&mut buf)
+            .map_err(|e| WpxError::Other(e.to_string()))?;
         let path = format!("{dir}/wpx-{name}.1");
         std::fs::write(&path, &buf).map_err(|e| WpxError::Other(e.to_string()))?;
     }

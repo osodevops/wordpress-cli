@@ -1,7 +1,7 @@
+use crate::crud;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use wpx_api::WpClient;
-use crate::crud;
 use wpx_core::resources::page::{Page, PageCreateParams};
 use wpx_core::WpxError;
 use wpx_output::RenderPayload;
@@ -97,23 +97,38 @@ impl PageCreateCli {
         let mut params = if self.json {
             let stdin = std::io::read_to_string(std::io::stdin())
                 .map_err(|e| WpxError::Other(format!("Failed to read stdin: {e}")))?;
-            serde_json::from_str(&stdin)
-                .map_err(|e| WpxError::Validation {
-                    field: "json".into(),
-                    message: format!("Invalid JSON input: {e}"),
-                })?
+            serde_json::from_str(&stdin).map_err(|e| WpxError::Validation {
+                field: "json".into(),
+                message: format!("Invalid JSON input: {e}"),
+            })?
         } else {
             PageCreateParams::default()
         };
 
-        if self.title.is_some() { params.title = self.title.clone(); }
-        if self.content.is_some() { params.content = self.content.clone(); }
-        if self.excerpt.is_some() { params.excerpt = self.excerpt.clone(); }
-        if self.status.is_some() { params.status = self.status.clone(); }
-        if self.author.is_some() { params.author = self.author; }
-        if self.slug.is_some() { params.slug = self.slug.clone(); }
-        if self.parent.is_some() { params.parent = self.parent; }
-        if self.menu_order.is_some() { params.menu_order = self.menu_order; }
+        if self.title.is_some() {
+            params.title = self.title.clone();
+        }
+        if self.content.is_some() {
+            params.content = self.content.clone();
+        }
+        if self.excerpt.is_some() {
+            params.excerpt = self.excerpt.clone();
+        }
+        if self.status.is_some() {
+            params.status = self.status.clone();
+        }
+        if self.author.is_some() {
+            params.author = self.author;
+        }
+        if self.slug.is_some() {
+            params.slug = self.slug.clone();
+        }
+        if self.parent.is_some() {
+            params.parent = self.parent;
+        }
+        if self.menu_order.is_some() {
+            params.menu_order = self.menu_order;
+        }
 
         Ok(params)
     }

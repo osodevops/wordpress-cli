@@ -22,8 +22,7 @@ impl Resource for Plugin {
     const NAME: &'static str = "plugin";
     const NAME_PLURAL: &'static str = "plugins";
     const API_PATH: &'static str = "wp/v2/plugins";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["name", "status", "version"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["name", "status", "version"];
 }
 
 #[cfg(test)]

@@ -93,15 +93,33 @@ impl UserCreateCli {
             UserCreateParams::default()
         };
 
-        if self.username.is_some() { params.username = self.username.clone(); }
-        if self.name.is_some() { params.name = self.name.clone(); }
-        if self.first_name.is_some() { params.first_name = self.first_name.clone(); }
-        if self.last_name.is_some() { params.last_name = self.last_name.clone(); }
-        if self.email.is_some() { params.email = self.email.clone(); }
-        if self.password.is_some() { params.password = self.password.clone(); }
-        if self.url.is_some() { params.url = self.url.clone(); }
-        if self.description.is_some() { params.description = self.description.clone(); }
-        if self.roles.is_some() { params.roles = self.roles.clone(); }
+        if self.username.is_some() {
+            params.username = self.username.clone();
+        }
+        if self.name.is_some() {
+            params.name = self.name.clone();
+        }
+        if self.first_name.is_some() {
+            params.first_name = self.first_name.clone();
+        }
+        if self.last_name.is_some() {
+            params.last_name = self.last_name.clone();
+        }
+        if self.email.is_some() {
+            params.email = self.email.clone();
+        }
+        if self.password.is_some() {
+            params.password = self.password.clone();
+        }
+        if self.url.is_some() {
+            params.url = self.url.clone();
+        }
+        if self.description.is_some() {
+            params.description = self.description.clone();
+        }
+        if self.roles.is_some() {
+            params.roles = self.roles.clone();
+        }
 
         Ok(params)
     }
@@ -118,9 +136,12 @@ pub async fn handle(
         UserCommands::Me => {
             let response: wpx_api::ApiResponse<User> =
                 client.get("wp/v2/users/me", &[("context", "edit")]).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
-            Ok(RenderPayload { data, summary: None })
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+            Ok(RenderPayload {
+                data,
+                summary: None,
+            })
         }
         UserCommands::Create(args) => {
             let params = args.to_params()?;
@@ -130,7 +151,11 @@ pub async fn handle(
             let params = args.to_params()?;
             crud::update::<User>(client, *id, &params, dry_run).await
         }
-        UserCommands::Delete { id, reassign, force: _ } => {
+        UserCommands::Delete {
+            id,
+            reassign,
+            force: _,
+        } => {
             if dry_run {
                 return Ok(RenderPayload {
                     data: serde_json::json!({

@@ -13,8 +13,7 @@ impl Resource for MenuLocation {
     const NAME: &'static str = "menu-location";
     const NAME_PLURAL: &'static str = "menu locations";
     const API_PATH: &'static str = "wp/v2/menu-locations";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["name", "description", "menu"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["name", "description", "menu"];
 }
 
 #[cfg(test)]

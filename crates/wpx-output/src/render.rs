@@ -20,7 +20,13 @@ pub struct OutputConfig {
 
 /// Render a payload to stdout in the specified format.
 pub fn render(payload: &RenderPayload, format: OutputFormat) -> Result<(), WpxError> {
-    render_with_config(payload, &OutputConfig { format, fields: None })
+    render_with_config(
+        payload,
+        &OutputConfig {
+            format,
+            fields: None,
+        },
+    )
 }
 
 /// Render a payload with full output configuration (format + field mask).
@@ -104,8 +110,13 @@ fn render_table(data: &Value, out: &mut impl Write) -> Result<(), WpxError> {
             // Print header
             write!(out, " ").map_err(io_err)?;
             for (i, header) in headers.iter().enumerate() {
-                write!(out, " {:width$}", header.to_uppercase(), width = widths[i] + 1)
-                    .map_err(io_err)?;
+                write!(
+                    out,
+                    " {:width$}",
+                    header.to_uppercase(),
+                    width = widths[i] + 1
+                )
+                .map_err(io_err)?;
             }
             writeln!(out).map_err(io_err)?;
 
@@ -187,8 +198,7 @@ fn render_ndjson(data: &Value, out: &mut impl Write) -> Result<(), WpxError> {
             }
         }
         _ => {
-            serde_json::to_writer(&mut *out, data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            serde_json::to_writer(&mut *out, data).map_err(|e| WpxError::Other(e.to_string()))?;
             writeln!(out).map_err(io_err)?;
         }
     }

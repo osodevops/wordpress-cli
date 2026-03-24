@@ -14,8 +14,7 @@ impl Resource for PostStatus {
     const NAME: &'static str = "post-status";
     const NAME_PLURAL: &'static str = "post statuses";
     const API_PATH: &'static str = "wp/v2/statuses";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["slug", "name", "public", "queryable"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["slug", "name", "public", "queryable"];
 }
 
 #[cfg(test)]

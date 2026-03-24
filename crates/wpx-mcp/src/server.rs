@@ -58,10 +58,7 @@ pub async fn serve_stdio(site: &str) -> Result<(), WpxError> {
         };
 
         let id = request.get("id").cloned().unwrap_or(Value::Null);
-        let method = request
-            .get("method")
-            .and_then(|m| m.as_str())
-            .unwrap_or("");
+        let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
         let params = request.get("params").cloned().unwrap_or(json!({}));
 
         let response = match method {
@@ -86,12 +83,8 @@ pub async fn serve_stdio(site: &str) -> Result<(), WpxError> {
     Ok(())
 }
 
-async fn write_response(
-    writer: &mut tokio::io::Stdout,
-    response: &Value,
-) -> Result<(), WpxError> {
-    let serialized =
-        serde_json::to_string(response).map_err(|e| WpxError::Other(e.to_string()))?;
+async fn write_response(writer: &mut tokio::io::Stdout, response: &Value) -> Result<(), WpxError> {
+    let serialized = serde_json::to_string(response).map_err(|e| WpxError::Other(e.to_string()))?;
     debug!("MCP response: {serialized}");
     writer
         .write_all(serialized.as_bytes())
@@ -149,10 +142,7 @@ fn handle_tools_list(id: &Value) -> Value {
 }
 
 async fn handle_tools_call(id: &Value, params: &Value, site: &str) -> Value {
-    let tool_name = params
-        .get("name")
-        .and_then(|n| n.as_str())
-        .unwrap_or("");
+    let tool_name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
     let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
 
     let command_path = tools::tool_name_to_command_path(tool_name);
@@ -219,10 +209,7 @@ fn handle_resources_list(id: &Value) -> Value {
 }
 
 async fn handle_resources_read(id: &Value, params: &Value, _site: &str) -> Value {
-    let uri = params
-        .get("uri")
-        .and_then(|u| u.as_str())
-        .unwrap_or("");
+    let uri = params.get("uri").and_then(|u| u.as_str()).unwrap_or("");
 
     let content = match uri {
         "wpx://sites" => {
@@ -292,7 +279,10 @@ async fn dispatch_tool(
         }
         ["plugin", "install"] => {
             let slug = args.get("slug").and_then(|v| v.as_str()).unwrap_or("");
-            let activate = args.get("activate").and_then(|v| v.as_bool()).unwrap_or(false);
+            let activate = args
+                .get("activate")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let status = if activate { "active" } else { "inactive" };
             let body = json!({"slug": slug, "status": status});
             let resp: wpx_api::ApiResponse<Value> = client.post("wp/v2/plugins", &body).await?;
@@ -321,8 +311,7 @@ async fn dispatch_tool(
             Ok(serde_json::to_value(&resp.data).unwrap_or_default())
         }
         ["settings", "list"] => {
-            let resp: wpx_api::ApiResponse<Value> =
-                client.get("wp/v2/settings", &[]).await?;
+            let resp: wpx_api::ApiResponse<Value> = client.get("wp/v2/settings", &[]).await?;
             Ok(resp.data)
         }
         ["search"] => {
@@ -338,8 +327,7 @@ async fn dispatch_tool(
         _ => {
             // Generic fallback: try to call as a REST API path
             let path = format!("wp/v2/{}", command_path.join("/"));
-            let resp: wpx_api::ApiResponse<Value> =
-                client.get(&path, &build_query(args)).await?;
+            let resp: wpx_api::ApiResponse<Value> = client.get(&path, &build_query(args)).await?;
             Ok(resp.data)
         }
     }

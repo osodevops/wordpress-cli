@@ -34,7 +34,13 @@ pub struct GlobalFlags {
     pub url: Option<String>,
 
     /// Output format: json, table, csv, yaml, ndjson, auto.
-    #[arg(long, env = "WPX_OUTPUT", default_value = "auto", value_enum, global = true)]
+    #[arg(
+        long,
+        env = "WPX_OUTPUT",
+        default_value = "auto",
+        value_enum,
+        global = true
+    )]
     pub output: OutputFormat,
 
     /// Comma-separated field mask to reduce output.

@@ -145,8 +145,7 @@ impl WpxError {
             Self::NotFound { resource, id } => {
                 obj["resource"] = json!(resource);
                 obj["id"] = json!(id);
-                obj["suggestion"] =
-                    json!(format!("Use 'wpx {} list' to find valid IDs", resource));
+                obj["suggestion"] = json!(format!("Use 'wpx {} list' to find valid IDs", resource));
             }
             Self::RateLimited { retry_after_secs } => {
                 if let Some(secs) = retry_after_secs {
@@ -214,7 +213,10 @@ mod tests {
         let json = err.to_error_json();
         assert_eq!(json["error"], true);
         assert_eq!(json["exit_code"], 4);
-        assert!(json["suggestion"].as_str().unwrap().contains("wpx post list"));
+        assert!(json["suggestion"]
+            .as_str()
+            .unwrap()
+            .contains("wpx post list"));
     }
 
     #[test]

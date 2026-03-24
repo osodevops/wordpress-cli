@@ -17,8 +17,7 @@ impl Resource for Tag {
     const NAME: &'static str = "tag";
     const NAME_PLURAL: &'static str = "tags";
     const API_PATH: &'static str = "wp/v2/tags";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["id", "name", "slug", "count"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["id", "name", "slug", "count"];
 }
 
 /// Parameters for creating a tag.

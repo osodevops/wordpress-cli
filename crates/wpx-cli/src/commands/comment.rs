@@ -104,8 +104,7 @@ async fn set_comment_status(
     let body = serde_json::json!({ "status": status });
     let path = format!("wp/v2/comments/{id}");
     let response: wpx_api::ApiResponse<Comment> = client.post(&path, &body).await?;
-    let data = serde_json::to_value(&response.data)
-        .map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
     Ok(RenderPayload {
         data,
         summary: Some(format!("comment {id} marked as {status}")),

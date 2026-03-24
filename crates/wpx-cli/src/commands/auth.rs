@@ -26,11 +26,7 @@ pub async fn handle(
     }
 }
 
-fn handle_set(
-    site_name: &str,
-    username: &str,
-    password: &str,
-) -> Result<RenderPayload, WpxError> {
+fn handle_set(site_name: &str, username: &str, password: &str) -> Result<RenderPayload, WpxError> {
     let mut store = CredentialStore::load();
     store.set(
         site_name.to_string(),
@@ -161,8 +157,7 @@ async fn handle_oauth(
             access_token: Some(token_response.access_token),
             refresh_token: token_response.refresh_token,
             token_expiry: token_response.expires_in.map(|e| {
-                let expiry = std::time::SystemTime::now()
-                    + std::time::Duration::from_secs(e);
+                let expiry = std::time::SystemTime::now() + std::time::Duration::from_secs(e);
                 format!("{:?}", expiry)
             }),
             client_id: Some(client_id.to_string()),
@@ -180,7 +175,9 @@ async fn handle_oauth(
             "auth_method": "oauth2",
             "has_refresh_token": store.get(site_name).and_then(|c| c.refresh_token.as_ref()).is_some(),
         }),
-        summary: Some(format!("OAuth 2.1 authentication configured for site '{site_name}'")),
+        summary: Some(format!(
+            "OAuth 2.1 authentication configured for site '{site_name}'"
+        )),
     })
 }
 

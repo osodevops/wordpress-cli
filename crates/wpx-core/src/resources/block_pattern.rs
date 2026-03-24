@@ -16,8 +16,7 @@ impl Resource for BlockPattern {
     const NAME: &'static str = "block-pattern";
     const NAME_PLURAL: &'static str = "block patterns";
     const API_PATH: &'static str = "wp/v2/block-patterns/patterns";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["name", "title", "categories"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["name", "title", "categories"];
 }
 
 #[cfg(test)]

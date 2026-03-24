@@ -79,9 +79,7 @@ pub async fn handle(
     match command {
         TagCommands::List(args) => crud::list::<Tag>(client, args).await,
         TagCommands::Get { id } => crud::get::<Tag>(client, *id).await,
-        TagCommands::Create(args) => {
-            crud::create::<Tag>(client, &args.to_params(), dry_run).await
-        }
+        TagCommands::Create(args) => crud::create::<Tag>(client, &args.to_params(), dry_run).await,
         TagCommands::Update { id, args } => {
             crud::update::<Tag>(client, *id, &args.to_params(), dry_run).await
         }

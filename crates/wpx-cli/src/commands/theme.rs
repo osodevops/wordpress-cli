@@ -51,9 +51,12 @@ pub async fn handle(
         ThemeCommands::Get { slug } => {
             let path = format!("wp/v2/themes/{slug}");
             let response: wpx_api::ApiResponse<Theme> = client.get(&path, &[]).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
-            Ok(RenderPayload { data, summary: None })
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+            Ok(RenderPayload {
+                data,
+                summary: None,
+            })
         }
         ThemeCommands::Activate { slug } => {
             if dry_run {
@@ -65,8 +68,8 @@ pub async fn handle(
             let path = format!("wp/v2/themes/{slug}");
             let body = json!({ "status": "active" });
             let response: wpx_api::ApiResponse<Theme> = client.post(&path, &body).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some(format!("Theme '{slug}' activated")),
@@ -91,9 +94,13 @@ pub async fn handle(
             let response: wpx_api::ApiResponse<Vec<Theme>> =
                 client.get("wp/v2/themes", &[]).await?;
             let total = response.data.len();
-            let active = response.data.iter().filter(|t| t.status.as_deref() == Some("active")).count();
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let active = response
+                .data
+                .iter()
+                .filter(|t| t.status.as_deref() == Some("active"))
+                .count();
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some(format!("{total} themes total - {active} active")),

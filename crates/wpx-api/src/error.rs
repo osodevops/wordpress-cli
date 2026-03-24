@@ -35,10 +35,7 @@ pub fn from_status(status: u16, code: String, message: String) -> WpxError {
         429 => WpxError::RateLimited {
             retry_after_secs: None,
         },
-        s if (500..600).contains(&s) => WpxError::Server {
-            status: s,
-            message,
-        },
+        s if (500..600).contains(&s) => WpxError::Server { status: s, message },
         _ => WpxError::Api {
             code,
             message,

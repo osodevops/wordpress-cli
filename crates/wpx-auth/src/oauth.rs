@@ -151,12 +151,9 @@ pub async fn run_oauth_flow(
         });
     }
 
-    let token_response: TokenResponse = response
-        .json()
-        .await
-        .map_err(|e| WpxError::Auth {
-            message: format!("Failed to parse token response: {e}"),
-        })?;
+    let token_response: TokenResponse = response.json().await.map_err(|e| WpxError::Auth {
+        message: format!("Failed to parse token response: {e}"),
+    })?;
 
     Ok(token_response)
 }
@@ -250,7 +247,10 @@ mod tests {
         let challenge = PkceChallenge::compute_challenge("test_verifier_12345");
         // SHA256 of "test_verifier_12345" base64url-encoded should be consistent
         assert!(!challenge.is_empty());
-        assert_eq!(challenge, PkceChallenge::compute_challenge("test_verifier_12345"));
+        assert_eq!(
+            challenge,
+            PkceChallenge::compute_challenge("test_verifier_12345")
+        );
     }
 
     #[test]

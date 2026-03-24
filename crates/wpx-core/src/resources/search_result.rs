@@ -16,7 +16,8 @@ impl Resource for SearchResult {
     const NAME: &'static str = "search-result";
     const NAME_PLURAL: &'static str = "search results";
     const API_PATH: &'static str = "wp/v2/search";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["id", "title", "type", "subtype", "url"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
+        &["id", "title", "type", "subtype", "url"];
 }
 
 #[cfg(test)]

@@ -71,23 +71,27 @@ impl CredentialStore {
 
     /// Save credentials to the credentials file.
     pub fn save(&self) -> Result<(), WpxError> {
-        let dir = super::WpxConfig::ensure_config_dir()
-            .map_err(|e| WpxError::Config { message: e.to_string() })?;
+        let dir = super::WpxConfig::ensure_config_dir().map_err(|e| WpxError::Config {
+            message: e.to_string(),
+        })?;
         let path = dir.join("credentials.toml");
 
-        let contents = toml::to_string_pretty(self)
-            .map_err(|e| WpxError::Config { message: e.to_string() })?;
+        let contents = toml::to_string_pretty(self).map_err(|e| WpxError::Config {
+            message: e.to_string(),
+        })?;
 
-        std::fs::write(&path, &contents)
-            .map_err(|e| WpxError::Config { message: e.to_string() })?;
+        std::fs::write(&path, &contents).map_err(|e| WpxError::Config {
+            message: e.to_string(),
+        })?;
 
         // Set restrictive permissions (Unix only)
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let perms = std::fs::Permissions::from_mode(0o600);
-            std::fs::set_permissions(&path, perms)
-                .map_err(|e| WpxError::Config { message: e.to_string() })?;
+            std::fs::set_permissions(&path, perms).map_err(|e| WpxError::Config {
+                message: e.to_string(),
+            })?;
         }
 
         Ok(())

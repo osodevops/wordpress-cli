@@ -1,7 +1,7 @@
+use crate::crud;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use wpx_api::WpClient;
-use crate::crud;
 use wpx_core::resources::post::{Post, PostCreateParams};
 use wpx_core::WpxError;
 use wpx_output::RenderPayload;
@@ -141,11 +141,10 @@ impl PostCreateArgs {
         let mut params = if self.json {
             let stdin = std::io::read_to_string(std::io::stdin())
                 .map_err(|e| WpxError::Other(format!("Failed to read stdin: {e}")))?;
-            serde_json::from_str(&stdin)
-                .map_err(|e| WpxError::Validation {
-                    field: "json".into(),
-                    message: format!("Invalid JSON input: {e}"),
-                })?
+            serde_json::from_str(&stdin).map_err(|e| WpxError::Validation {
+                field: "json".into(),
+                message: format!("Invalid JSON input: {e}"),
+            })?
         } else {
             PostCreateParams::default()
         };

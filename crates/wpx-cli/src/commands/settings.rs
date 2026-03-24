@@ -69,8 +69,8 @@ pub async fn handle(
             }
 
             // Try to parse value as JSON (number, bool, null), fall back to string
-            let parsed_value = serde_json::from_str::<serde_json::Value>(value)
-                .unwrap_or_else(|_| json!(value));
+            let parsed_value =
+                serde_json::from_str::<serde_json::Value>(value).unwrap_or_else(|_| json!(value));
 
             let body = json!({ key: parsed_value });
             let response: wpx_api::ApiResponse<serde_json::Value> =

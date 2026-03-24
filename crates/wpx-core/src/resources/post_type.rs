@@ -40,7 +40,10 @@ mod tests {
         let post_type: PostType = serde_json::from_str(json).unwrap();
         assert_eq!(post_type.slug.as_deref(), Some("post"));
         assert_eq!(post_type.hierarchical, Some(false));
-        assert_eq!(post_type.taxonomies.as_ref().unwrap(), &["category", "post_tag"]);
+        assert_eq!(
+            post_type.taxonomies.as_ref().unwrap(),
+            &["category", "post_tag"]
+        );
     }
 
     #[test]

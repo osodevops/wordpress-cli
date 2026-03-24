@@ -58,8 +58,10 @@ pub async fn list_all_pages<R: Resource>(
     query.push(("per_page".into(), "100".into()));
     query.push(("page".into(), "1".into()));
 
-    let query_refs: Vec<(&str, &str)> =
-        query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let query_refs: Vec<(&str, &str)> = query
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
 
     // First page
     let response: wpx_api::ApiResponse<Vec<R>> = client.get(R::API_PATH, &query_refs).await?;
@@ -72,8 +74,7 @@ pub async fn list_all_pages<R: Resource>(
 
     // Write first page items
     for item in &response.data {
-        let line = serde_json::to_string(item)
-            .map_err(|e| WpxError::Other(e.to_string()))?;
+        let line = serde_json::to_string(item).map_err(|e| WpxError::Other(e.to_string()))?;
         writeln!(out, "{line}").map_err(|e| WpxError::Other(e.to_string()))?;
         count += 1;
     }
@@ -87,15 +88,16 @@ pub async fn list_all_pages<R: Resource>(
             p.1 = page_num.to_string();
         }
 
-        let page_refs: Vec<(&str, &str)> =
-            page_query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        let page_refs: Vec<(&str, &str)> = page_query
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
 
         let page_response: wpx_api::ApiResponse<Vec<R>> =
             client.get(R::API_PATH, &page_refs).await?;
 
         for item in &page_response.data {
-            let line = serde_json::to_string(item)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let line = serde_json::to_string(item).map_err(|e| WpxError::Other(e.to_string()))?;
             writeln!(out, "{line}").map_err(|e| WpxError::Other(e.to_string()))?;
             count += 1;
         }
@@ -105,7 +107,10 @@ pub async fn list_all_pages<R: Resource>(
     // Return null data (already streamed) with summary
     Ok(RenderPayload {
         data: serde_json::Value::Null,
-        summary: Some(format!("{count} {} streamed ({total_pages} pages)", R::NAME_PLURAL)),
+        summary: Some(format!(
+            "{count} {} streamed ({total_pages} pages)",
+            R::NAME_PLURAL
+        )),
     })
 }
 
@@ -115,13 +120,14 @@ pub async fn list<R: Resource>(
     params: &impl Serialize,
 ) -> Result<RenderPayload, WpxError> {
     let query = to_query_params(params);
-    let query_refs: Vec<(&str, &str)> =
-        query.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let query_refs: Vec<(&str, &str)> = query
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
 
     let response: wpx_api::ApiResponse<Vec<R>> = client.get(R::API_PATH, &query_refs).await?;
 
-    let data = serde_json::to_value(&response.data)
-        .map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
 
     let total = response.total.unwrap_or(response.data.len() as u64);
     Ok(RenderPayload {
@@ -135,8 +141,7 @@ pub async fn get<R: Resource>(client: &WpClient, id: u64) -> Result<RenderPayloa
     let path = format!("{}/{id}", R::API_PATH);
     let response: wpx_api::ApiResponse<R> = client.get(&path, &[]).await?;
 
-    let data =
-        serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
 
     Ok(RenderPayload {
         data,
@@ -151,8 +156,7 @@ pub async fn create<R: Resource>(
     dry_run: bool,
 ) -> Result<RenderPayload, WpxError> {
     if dry_run {
-        let body_value =
-            serde_json::to_value(body).map_err(|e| WpxError::Other(e.to_string()))?;
+        let body_value = serde_json::to_value(body).map_err(|e| WpxError::Other(e.to_string()))?;
         return Ok(RenderPayload {
             data: json!({
                 "dry_run": true,
@@ -166,8 +170,7 @@ pub async fn create<R: Resource>(
 
     let response: wpx_api::ApiResponse<R> = client.post(R::API_PATH, body).await?;
 
-    let data =
-        serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
 
     Ok(RenderPayload {
         data,
@@ -183,8 +186,7 @@ pub async fn update<R: Resource>(
     dry_run: bool,
 ) -> Result<RenderPayload, WpxError> {
     if dry_run {
-        let body_value =
-            serde_json::to_value(body).map_err(|e| WpxError::Other(e.to_string()))?;
+        let body_value = serde_json::to_value(body).map_err(|e| WpxError::Other(e.to_string()))?;
         return Ok(RenderPayload {
             data: json!({
                 "dry_run": true,
@@ -200,8 +202,7 @@ pub async fn update<R: Resource>(
     let path = format!("{}/{id}", R::API_PATH);
     let response: wpx_api::ApiResponse<R> = client.post(&path, body).await?;
 
-    let data =
-        serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
 
     Ok(RenderPayload {
         data,
@@ -243,8 +244,7 @@ pub async fn delete<R: Resource>(
         vec![]
     };
 
-    let response: wpx_api::ApiResponse<serde_json::Value> =
-        client.delete(&path, &params).await?;
+    let response: wpx_api::ApiResponse<serde_json::Value> = client.delete(&path, &params).await?;
 
     Ok(RenderPayload {
         data: response.data,
@@ -291,9 +291,11 @@ pub async fn get_by_slug<R: Resource>(
 ) -> Result<RenderPayload, WpxError> {
     let path = format!("{api_path}/{slug}");
     let response: wpx_api::ApiResponse<R> = client.get(&path, &[]).await?;
-    let data = serde_json::to_value(&response.data)
-        .map_err(|e| WpxError::Other(e.to_string()))?;
-    Ok(RenderPayload { data, summary: None })
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+    Ok(RenderPayload {
+        data,
+        summary: None,
+    })
 }
 
 #[cfg(test)]

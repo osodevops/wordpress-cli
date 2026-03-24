@@ -18,8 +18,7 @@ impl Resource for BlockType {
     const NAME: &'static str = "block-type";
     const NAME_PLURAL: &'static str = "block types";
     const API_PATH: &'static str = "wp/v2/block-types";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["name", "title", "category"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["name", "title", "category"];
 }
 
 #[cfg(test)]

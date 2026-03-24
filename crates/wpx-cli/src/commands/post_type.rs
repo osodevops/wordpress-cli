@@ -22,9 +22,7 @@ pub async fn handle(
     client: &WpClient,
 ) -> Result<RenderPayload, WpxError> {
     match command {
-        PostTypeCommands::List => {
-            crud::list_object_keyed::<PostType>(client, "wp/v2/types").await
-        }
+        PostTypeCommands::List => crud::list_object_keyed::<PostType>(client, "wp/v2/types").await,
         PostTypeCommands::Get { slug } => {
             crud::get_by_slug::<PostType>(client, "wp/v2/types", slug).await
         }

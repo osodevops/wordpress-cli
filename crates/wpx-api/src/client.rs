@@ -49,8 +49,9 @@ impl WpClient {
     fn api_url(&self, path: &str) -> Result<Url, WpxError> {
         let base = self.base_url.as_str().trim_end_matches('/');
         let path = path.trim_start_matches('/');
-        Url::parse(&format!("{base}/wp-json/{path}"))
-            .map_err(|e| WpxError::Config { message: format!("Invalid URL: {e}") })
+        Url::parse(&format!("{base}/wp-json/{path}")).map_err(|e| WpxError::Config {
+            message: format!("Invalid URL: {e}"),
+        })
     }
 
     /// Perform a GET request.
@@ -134,10 +135,7 @@ impl WpClient {
     }
 
     /// Execute a request with retry logic for transient failures.
-    async fn request_with_retry<T, F>(
-        &self,
-        build_request: F,
-    ) -> Result<ApiResponse<T>, WpxError>
+    async fn request_with_retry<T, F>(&self, build_request: F) -> Result<ApiResponse<T>, WpxError>
     where
         T: DeserializeOwned,
         F: Fn() -> reqwest::RequestBuilder,
@@ -188,9 +186,7 @@ impl WpClient {
             }
         }
 
-        Err(WpxError::Network(
-            "Max retries exceeded".into(),
-        ))
+        Err(WpxError::Network("Max retries exceeded".into()))
     }
 
     /// Parse an HTTP response into an ApiResponse.
@@ -227,18 +223,13 @@ impl WpClient {
                     wp_error.message,
                 ))
             } else {
-                Err(error::from_status(
-                    status_code,
-                    "unknown".into(),
-                    body,
-                ))
+                Err(error::from_status(status_code, "unknown".into(), body))
             }
         }
     }
 
     fn is_retryable(status: StatusCode) -> bool {
-        status == StatusCode::TOO_MANY_REQUESTS
-            || status.is_server_error()
+        status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error()
     }
 
     fn parse_retry_after(headers: &HeaderMap) -> Option<Duration> {
@@ -260,8 +251,11 @@ impl WpClient {
     fn bridge_url(&self, ability: &str) -> Result<Url, WpxError> {
         let base = self.base_url.as_str().trim_end_matches('/');
         let ability = ability.trim_start_matches('/');
-        Url::parse(&format!("{base}/wp-json/wpx-bridge/v1/{ability}"))
-            .map_err(|e| WpxError::Config { message: format!("Invalid URL: {e}") })
+        Url::parse(&format!("{base}/wp-json/wpx-bridge/v1/{ability}")).map_err(|e| {
+            WpxError::Config {
+                message: format!("Invalid URL: {e}"),
+            }
+        })
     }
 
     /// Call a wpx-bridge endpoint (POST with JSON body).
@@ -282,12 +276,7 @@ impl WpClient {
     /// Check if the wpx-bridge plugin is installed and available.
     pub async fn require_bridge(&self) -> Result<(), WpxError> {
         let url = self.bridge_url("status")?;
-        let result = self
-            .http
-            .get(url)
-            .timeout(self.timeout)
-            .send()
-            .await;
+        let result = self.http.get(url).timeout(self.timeout).send().await;
         match result {
             Ok(resp) if resp.status().is_success() => Ok(()),
             _ => Err(WpxError::Other(

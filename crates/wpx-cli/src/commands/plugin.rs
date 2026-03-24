@@ -72,9 +72,12 @@ pub async fn handle(
         PluginCommands::Get { slug } => {
             let path = format!("wp/v2/plugins/{slug}");
             let response: wpx_api::ApiResponse<Plugin> = client.get(&path, &[]).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
-            Ok(RenderPayload { data, summary: None })
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
+            Ok(RenderPayload {
+                data,
+                summary: None,
+            })
         }
         PluginCommands::Install { slug, activate } => {
             if dry_run {
@@ -92,8 +95,8 @@ pub async fn handle(
             let body = json!({ "slug": slug, "status": status });
             let response: wpx_api::ApiResponse<Plugin> =
                 client.post("wp/v2/plugins", &body).await?;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some(format!("Plugin '{slug}' installed")),
@@ -137,10 +140,14 @@ pub async fn handle(
             let response: wpx_api::ApiResponse<Vec<Plugin>> =
                 client.get("wp/v2/plugins", &[]).await?;
             let total = response.data.len();
-            let active = response.data.iter().filter(|p| p.status.as_deref() == Some("active")).count();
+            let active = response
+                .data
+                .iter()
+                .filter(|p| p.status.as_deref() == Some("active"))
+                .count();
             let inactive = total - active;
-            let data = serde_json::to_value(&response.data)
-                .map_err(|e| WpxError::Other(e.to_string()))?;
+            let data =
+                serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
             Ok(RenderPayload {
                 data,
                 summary: Some(format!(
@@ -166,8 +173,7 @@ async fn set_plugin_status(
     let path = format!("wp/v2/plugins/{slug}");
     let body = json!({ "status": status });
     let response: wpx_api::ApiResponse<Plugin> = client.post(&path, &body).await?;
-    let data = serde_json::to_value(&response.data)
-        .map_err(|e| WpxError::Other(e.to_string()))?;
+    let data = serde_json::to_value(&response.data).map_err(|e| WpxError::Other(e.to_string()))?;
     Ok(RenderPayload {
         data,
         summary: Some(format!("Plugin '{slug}' {status}")),

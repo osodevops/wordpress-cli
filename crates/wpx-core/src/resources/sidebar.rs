@@ -16,8 +16,7 @@ impl Resource for Sidebar {
     const NAME: &'static str = "sidebar";
     const NAME_PLURAL: &'static str = "sidebars";
     const API_PATH: &'static str = "wp/v2/sidebars";
-    const DEFAULT_TABLE_FIELDS: &'static [&'static str] =
-        &["id", "name", "status"];
+    const DEFAULT_TABLE_FIELDS: &'static [&'static str] = &["id", "name", "status"];
 }
 
 #[cfg(test)]
