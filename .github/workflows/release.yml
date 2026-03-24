@@ -20,16 +20,12 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: wpx-linux-x86_64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: wpx-linux-aarch64
           - target: x86_64-apple-darwin
             os: macos-latest
-            artifact: wpx-darwin-x86_64
           - target: aarch64-apple-darwin
             os: macos-latest
-            artifact: wpx-darwin-aarch64
 
     steps:
       - uses: actions/checkout@v4
@@ -55,40 +51,92 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist
-          cp target/${{ matrix.target }}/release/wpx dist/${{ matrix.artifact }}
-          chmod +x dist/${{ matrix.artifact }}
-          tar czf dist/${{ matrix.artifact }}.tar.gz -C dist ${{ matrix.artifact }}
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../wpx-${{ matrix.target }}.tar.gz wpx
 
       - name: Generate man pages
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           mkdir -p dist/man
           cargo run --release --target ${{ matrix.target }} -- man --dir dist/man
-          tar czf dist/wpx-man-pages.tar.gz -C dist/man .
+          tar czf wpx-man-pages.tar.gz -C dist/man .
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/*.tar.gz
+      - name: Upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" wpx-*.tar.gz --clobber || true
 
-  release:
-    name: Release
-    needs: build
+  create-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create release
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create ${{ github.ref_name }} \
-            --title "wpx ${{ github.ref_name }}" \
-            --generate-notes \
-            artifacts/*.tar.gz
+          gh release create "$GITHUB_REF_NAME" \
+            --title "wpx $GITHUB_REF_NAME" \
+            --generate-notes || true
+
+  homebrew:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Homebrew tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          BASE_URL="https://github.com/osodevops/wordpress-cli/releases/download/${GITHUB_REF_NAME}"
+
+          curl -fsSL "${BASE_URL}/wpx-aarch64-apple-darwin.tar.gz" -o arm64.tar.gz
+          curl -fsSL "${BASE_URL}/wpx-x86_64-apple-darwin.tar.gz" -o x86_64_mac.tar.gz
+          curl -fsSL "${BASE_URL}/wpx-x86_64-unknown-linux-gnu.tar.gz" -o x86_64_linux.tar.gz
+
+          SHA_ARM64=$(sha256sum arm64.tar.gz | awk '{print $1}')
+          SHA_X86_64_MAC=$(sha256sum x86_64_mac.tar.gz | awk '{print $1}')
+          SHA_X86_64_LINUX=$(sha256sum x86_64_linux.tar.gz | awk '{print $1}')
+
+          cat > wordpress-cli.rb <<FORMULA
+          class WordpressCli < Formula
+            desc "Rust-native WordPress CLI for AI agents & humans"
+            homepage "https://github.com/osodevops/wordpress-cli"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "${BASE_URL}/wpx-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA_ARM64}"
+              else
+                url "${BASE_URL}/wpx-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA_X86_64_MAC}"
+              end
+            end
+
+            on_linux do
+              url "${BASE_URL}/wpx-x86_64-unknown-linux-gnu.tar.gz"
+              sha256 "${SHA_X86_64_LINUX}"
+            end
+
+            def install
+              bin.install "wpx"
+            end
+
+            test do
+              assert_match "wpx", shell_output("#{bin}/wpx --version")
+            end
+          end
+          FORMULA
+
+          sed -i 's/^          //' wordpress-cli.rb
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/osodevops/homebrew-tap.git" tap
+          cp wordpress-cli.rb tap/Formula/wordpress-cli.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/wordpress-cli.rb
+          git commit -m "wordpress-cli ${VERSION}"
+          git push

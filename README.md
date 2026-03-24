@@ -31,7 +31,7 @@ Designed agent-first: structured JSON output, schema introspection, and semantic
 
 ```bash
 brew tap osodevops/wpx
-brew install wpx
+brew install osodevops/tap/wordpress-cli
 ```
 
 **Cargo** (from source):
