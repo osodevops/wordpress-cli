@@ -142,22 +142,6 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
             commands::fleet::handle(command, cli.global.dry_run, cli.global.timeout).await
         }
 
-        // MCP server
-        Commands::Mcp { command } => match command {
-            cli::McpCommands::Serve { transport, port: _ } => {
-                if transport != "stdio" {
-                    return Err(WpxError::Other(
-                            "Only 'stdio' transport is currently supported. SSE/HTTP transport coming soon.".into()
-                        ));
-                }
-                wpx_mcp::serve_stdio(&cli.global.site).await?;
-                Ok(RenderPayload {
-                    data: serde_json::Value::Null,
-                    summary: None,
-                })
-            }
-        },
-
         // Discover site capabilities (no auth needed)
         Commands::Discover { url } => {
             let base_url = url::Url::parse(url).map_err(|e| WpxError::Config {

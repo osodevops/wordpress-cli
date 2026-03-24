@@ -253,13 +253,7 @@ pub enum Commands {
         command: crate::commands::fleet::FleetCommands,
     },
 
-    /// Start the MCP (Model Context Protocol) server for AI agent integration.
-    Mcp {
-        #[command(subcommand)]
-        command: McpCommands,
-    },
-
-    /// Discover a WordPress site's capabilities (REST API, wpx-bridge, WooCommerce).
+    /// Discover a WordPress site's capabilities (REST API, WooCommerce).
     Discover {
         /// URL of the WordPress site to discover.
         url: String,
@@ -296,20 +290,6 @@ pub enum Commands {
         /// Output directory for man pages (default: stdout for main page).
         #[arg(long)]
         dir: Option<String>,
-    },
-}
-
-/// MCP server subcommands.
-#[derive(Debug, Subcommand)]
-pub enum McpCommands {
-    /// Start the MCP server.
-    Serve {
-        /// Transport type: "stdio" or "sse".
-        #[arg(long, default_value = "stdio")]
-        transport: String,
-        /// Port for SSE transport.
-        #[arg(long, default_value = "3000")]
-        port: u16,
     },
 }
 

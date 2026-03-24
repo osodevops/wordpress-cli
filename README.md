@@ -4,12 +4,11 @@
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2021-orange.svg)](https://www.rust-lang.org/)
 
-Rust-native CLI for managing WordPress sites remotely via the REST API. Designed agent-first: built-in MCP server, structured JSON output, schema introspection, and semantic exit codes let AI agents operate WordPress programmatically. Designed human-friendly: auto-detecting table output, colored terminals, and shell completions make it pleasant for interactive use. Zero runtime dependencies -- single static binary, no PHP or SSH required.
+Rust-native CLI for managing WordPress sites remotely via the REST API. Designed agent-first: structured JSON output, schema introspection, and semantic exit codes let AI agents operate WordPress programmatically. Designed human-friendly: auto-detecting table output, colored terminals, and shell completions make it pleasant for interactive use. Zero runtime dependencies -- single static binary, no PHP or SSH required.
 
 ## Features
 
 - **Full WordPress REST API coverage** -- 34 command groups spanning posts, pages, media, users, plugins, themes, menus, widgets, blocks, and more
-- **MCP server** -- built-in Model Context Protocol server (stdio transport) for Claude Desktop, VS Code, Cursor, and other AI agents
 - **Structured output** -- JSON, Table, CSV, YAML, and NDJSON formats with automatic TTY detection
 - **Schema introspection** -- `wpx schema <command>` emits JSON Schema for any command's input/output
 - **Semantic exit codes** -- 11 distinct codes (0-10) so agents can programmatically decide retry/abort/fix strategies
@@ -70,64 +69,6 @@ wpx post create --site production --title "Hello from wpx" --status draft
 
 # Global search
 wpx search "migration guide" --site production
-```
-
-## MCP Integration
-
-wpx includes a built-in MCP server that exposes every command as a tool for AI agents.
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "wpx": {
-      "command": "wpx",
-      "args": ["mcp", "serve", "--transport", "stdio"],
-      "env": {
-        "WPX_SITE": "production"
-      }
-    }
-  }
-}
-```
-
-### VS Code (Copilot / Continue)
-
-Add to your `.vscode/mcp.json`:
-
-```json
-{
-  "servers": {
-    "wpx": {
-      "command": "wpx",
-      "args": ["mcp", "serve", "--transport", "stdio"],
-      "env": {
-        "WPX_SITE": "production"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to your Cursor MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "wpx": {
-      "command": "wpx",
-      "args": ["mcp", "serve", "--transport", "stdio"],
-      "env": {
-        "WPX_SITE": "production"
-      }
-    }
-  }
-}
 ```
 
 ## Command Reference
@@ -194,11 +135,10 @@ Add to your Cursor MCP settings:
 | `discover` | Probe a site's REST API capabilities | *(direct command -- takes a URL argument)* |
 | `schema` | Show JSON Schema for a command | *(direct command -- takes a command path)* |
 
-### Agent Tools
+### Utilities
 
 | Command | Description | Subcommands |
 |---------|-------------|-------------|
-| `mcp` | Start the MCP server | `serve` |
 | `fleet` | Run commands across multiple sites | `exec`, `status` |
 | `auth` | Manage authentication | `set`, `test`, `list`, `logout`, `oauth` |
 | `info` | Show version, sites, capabilities | *(direct command)* |
@@ -383,14 +323,13 @@ wpx schema
 ## Architecture
 
 ```
-wpx binary
+wpx binary (6 crates)
 ├── wpx-cli       CLI parsing (clap), command dispatch, shell completions
 ├── wpx-core      Resource trait, domain types, semantic exit codes
 ├── wpx-api       HTTP client (reqwest + rustls), retry, pagination
 ├── wpx-auth      Application Passwords, OAuth 2.1 (PKCE)
 ├── wpx-config    TOML config, site profiles, credential store
-├── wpx-output    JSON, Table, CSV, YAML, NDJSON rendering
-└── wpx-mcp       MCP server (stdio transport, JSON-RPC 2.0)
+└── wpx-output    JSON, Table, CSV, YAML, NDJSON rendering
 ```
 
 All crates share a workspace version (`0.1.0`) and are published together.

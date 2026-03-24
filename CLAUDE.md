@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-wpx is a Rust-native WordPress CLI designed for both AI agents and humans. It manages WordPress sites remotely via the REST API, producing structured machine-readable output (JSON) when piped and human-readable tables when run interactively. The tool is organized as a Cargo workspace of seven crates, supports multi-site fleet management, and exposes an MCP (Model Context Protocol) server for direct AI agent integration. Authentication supports WordPress application passwords and OAuth 2.1 with PKCE.
+wpx is a Rust-native WordPress CLI designed for both AI agents and humans. It manages WordPress sites remotely via the REST API, producing structured machine-readable output (JSON) when piped and human-readable tables when run interactively. The tool is organized as a Cargo workspace of six crates, supports multi-site fleet management, and authentication via WordPress application passwords and OAuth 2.1 with PKCE.
 
 ## Build & Test
 
@@ -19,7 +19,6 @@ cargo test
 # Run tests for a specific crate
 cargo test -p wpx-core
 cargo test -p wpx-cli
-cargo test -p wpx-mcp
 
 # Run the CLI
 cargo run -- post list --site default
@@ -36,7 +35,7 @@ cargo run -- completions bash > wpx.bash
 
 ```
 wordpress-cli/
-├── Cargo.toml                          # Workspace root: 7 member crates, shared deps
+├── Cargo.toml                          # Workspace root: 6 member crates, shared deps
 ├── CLAUDE.md                           # This file — agent/LLM context
 │
 ├── crates/
@@ -75,7 +74,7 @@ wordpress-cli/
 │   │   └── src/
 │   │       ├── lib.rs                 # Re-exports: WpClient, ApiResponse
 │   │       ├── client.rs             # WpClient: GET/POST/PUT/DELETE, retry logic, backoff,
-│   │       │                          #   multipart upload, discover(), bridge_call()
+│   │       │                          #   multipart upload, discover()
 │   │       ├── response.rs           # ApiResponse<T> with total/total_pages from WP headers
 │   │       └── error.rs              # Maps reqwest/HTTP errors to WpxError variants
 │   │
@@ -105,25 +104,17 @@ wordpress-cli/
 │   │       │                          #   OutputConfig with field mask support
 │   │       └── fields.rs             # apply_field_mask(): filters JSON output to requested fields
 │   │
-│   ├── wpx-mcp/                        # MCP (Model Context Protocol) server
-│   │   └── src/
-│   │       ├── lib.rs                 # Re-exports: serve_stdio
-│   │       ├── server.rs             # JSON-RPC 2.0 over stdio: initialize, tools/list, tools/call,
-│   │       │                          #   resources/list, resources/read; builds WpClient per request
-│   │       └── tools.rs              # ToolDef struct, generate_tools() -> 35+ tool definitions,
-│   │                                  #   tool_name_to_command_path() for MCP-to-CLI mapping
-│   │
 │   └── wpx-cli/                        # CLI binary, command routing, CRUD helpers
 │       └── src/
 │           ├── main.rs               # Entry point: parse CLI, run command, render output, handle errors
-│           ├── cli.rs                # Clap derive structs: Cli, GlobalFlags, Commands enum (26 subcommands),
-│           │                          #   McpCommands, AuthCommands
+│           ├── cli.rs                # Clap derive structs: Cli, GlobalFlags, Commands enum,
+│           │                          #   AuthCommands
 │           ├── context.rs            # build_client(): resolves site profile + credentials -> WpClient
 │           ├── crud.rs               # Generic CRUD helpers: list, get, create, update, delete,
 │           │                          #   list_all_pages (streaming NDJSON), list_object_keyed,
 │           │                          #   get_by_slug, to_query_params, object_values_to_array
 │           ├── dispatch.rs           # Unified dispatcher: dispatch(command_path, args, client, dry_run)
-│           │                          #   used by CLI, MCP server, and fleet exec
+│           │                          #   used by CLI and fleet exec
 │           └── commands/
 │               ├── mod.rs            # Module declarations
 │               ├── post.rs           # PostCommands: list, get, create, update, delete, search
@@ -151,7 +142,7 @@ wordpress-cli/
 │               ├── search.rs         # Global search: SearchArgs, handle()
 │               ├── settings.rs       # SettingsCommands: list, get, set (aliased as "option")
 │               ├── fleet.rs          # FleetCommands: exec (concurrent multi-site), status
-│               ├── discover.rs       # Site capability discovery (REST API, wpx-bridge, WooCommerce)
+│               ├── discover.rs       # Site capability discovery (REST API, WooCommerce)
 │               ├── schema.rs         # JSON Schema introspection for command inputs/outputs
 │               └── auth.rs           # AuthCommands: set, test, list, logout, oauth
 ```
@@ -213,13 +204,6 @@ impl Resource for Post {
    - Add match arms for each subcommand (e.g., `["<name>", "list"]`, `["<name>", "get"]`)
    - Use the generic CRUD functions: `crud::list::<Name>()`, `crud::get::<Name>()`, etc.
 
-6. **Add MCP tool definitions** in `crates/wpx-mcp/src/tools.rs`:
-   - Add entries to the `entries` vec in `generate_tools()` with JSON Schema
-   - Tool name convention: `"wpx_<resource>_<action>"` (e.g., `"wpx_post_list"`)
-
-7. **Add MCP dispatch** in `crates/wpx-mcp/src/server.rs`:
-   - Add match arms in `dispatch_tool()` for the new commands
-
 ### CRUD Helpers
 
 Located in `crates/wpx-cli/src/crud.rs`. All are generic over `R: Resource`:
@@ -251,11 +235,10 @@ pub struct ApiResponse<T> {
 
 ### Unified Dispatcher
 
-`crates/wpx-cli/src/dispatch.rs` provides a single entry point used by three contexts:
+`crates/wpx-cli/src/dispatch.rs` provides a single entry point used by two contexts:
 
 1. **CLI** (`main.rs`) -- Clap-parsed commands delegate here for some routes
-2. **MCP server** (`wpx-mcp/src/server.rs`) -- Tool calls are converted to command paths
-3. **Fleet exec** (`commands/fleet.rs`) -- Multi-site commands dispatch through here
+2. **Fleet exec** (`commands/fleet.rs`) -- Multi-site commands dispatch through here
 
 Signature: `dispatch(command_path: &[&str], args: &Value, client: &WpClient, dry_run: bool) -> Result<RenderPayload, WpxError>`
 
@@ -383,59 +366,6 @@ Errors are written to stderr as JSON:
 
 The `WpClient` retries on transient failures (429 Too Many Requests, 5xx Server Error, timeouts, connection errors) with exponential backoff (1s, 2s, 4s, 8s...). Respects the `Retry-After` header when present. Default: 3 retries.
 
-## MCP Server
-
-### Starting the Server
-
-```bash
-wpx mcp serve                         # stdio transport (default)
-wpx mcp serve --transport stdio        # explicit stdio
-wpx --site production mcp serve        # target a specific site
-```
-
-### Protocol
-
-JSON-RPC 2.0 over stdin/stdout (one JSON object per line). Supported methods:
-
-- `initialize` -- Returns server capabilities and version
-- `tools/list` -- Returns 35+ tool definitions with JSON Schema
-- `tools/call` -- Dispatches to wpx command handlers
-- `resources/list` -- Returns available MCP resources (`wpx://sites`, `wpx://info`)
-- `resources/read` -- Reads an MCP resource
-- `ping` -- Health check
-
-### Tool Naming Convention
-
-CLI command paths are converted to MCP tool names:
-
-```
-CLI:  wpx post list          -> MCP tool: wpx_post_list
-CLI:  wpx plugin install     -> MCP tool: wpx_plugin_install
-CLI:  wpx post-type list     -> MCP tool: wpx_post_type_list
-CLI:  wpx menu-item list     -> MCP tool: wpx_menu_item_list
-CLI:  wpx search             -> MCP tool: wpx_search
-CLI:  wpx discover           -> MCP tool: wpx_discover
-```
-
-Rule: `wpx_` prefix + command path with spaces and hyphens replaced by underscores.
-
-Reverse mapping handles special cases (`post_type` -> `post-type`, `menu_item` -> `menu-item`) in `tool_name_to_command_path()`.
-
-### MCP Tool Dispatch Flow
-
-1. MCP client sends `tools/call` with `name: "wpx_post_list"` and `arguments: {...}`
-2. `server.rs` extracts tool name and arguments
-3. `tools::tool_name_to_command_path("wpx_post_list")` returns `["post", "list"]`
-4. `dispatch_tool()` in `server.rs` matches the command path and calls the appropriate `WpClient` method
-5. Result is returned as JSON-RPC response with `content: [{type: "text", text: "..."}]`
-
-### MCP Resources
-
-| URI | Description |
-|-----|-------------|
-| `wpx://sites` | List of configured site profiles (name, URL, auth method) |
-| `wpx://info` | wpx version and configured site names |
-
 ## Dependencies (Key)
 
 | Crate | Version | Purpose |
@@ -474,7 +404,6 @@ Reverse mapping handles special cases (`post_type` -> `post-type`, `menu_item` -
 cargo test                             # All workspace tests
 cargo test -p wpx-core                 # Core types and resource tests
 cargo test -p wpx-cli                  # CLI and CRUD helper tests
-cargo test -p wpx-mcp                  # MCP server and tool tests
 cargo test -p wpx-api                  # HTTP client tests
 cargo test -p wpx-auth                 # Auth provider tests
 cargo test -p wpx-config               # Config parsing tests
@@ -486,7 +415,6 @@ cargo test -p wpx-output               # Output rendering tests
 - Resource structs have deserialization tests with real WordPress JSON payloads
 - CRUD helpers test query param generation and object-to-array conversion
 - The dispatcher tests ID/string extraction from JSON args
-- MCP tests verify tool count (>30), tool naming, and response structure
 - Config tests verify TOML parsing and merge precedence
 - Error tests verify exit code mapping and structured JSON output
 

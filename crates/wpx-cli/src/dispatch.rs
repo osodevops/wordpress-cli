@@ -5,7 +5,7 @@ use wpx_output::RenderPayload;
 
 use crate::commands;
 
-/// Unified command dispatcher callable from CLI, MCP, and Fleet contexts.
+/// Unified command dispatcher callable from CLI and Fleet contexts.
 ///
 /// Takes a command path (e.g., `["post", "list"]`) and JSON arguments,
 /// dispatches to the appropriate handler, and returns the result.

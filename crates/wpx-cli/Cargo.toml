@@ -13,7 +13,6 @@ wpx-api = { workspace = true }
 wpx-auth = { workspace = true }
 wpx-config = { workspace = true }
 wpx-output = { workspace = true }
-wpx-mcp = { workspace = true }
 clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_mangen = { workspace = true }

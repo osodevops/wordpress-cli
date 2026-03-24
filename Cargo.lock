@@ -2268,7 +2268,6 @@ dependencies = [
  "wpx-auth",
  "wpx-config",
  "wpx-core",
- "wpx-mcp",
  "wpx-output",
 ]
 
@@ -2328,22 +2327,6 @@ dependencies = [
  "thiserror",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "wpx-mcp"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "url",
- "wpx-api",
- "wpx-auth",
- "wpx-config",
- "wpx-core",
- "wpx-output",
 ]
 
 [[package]]

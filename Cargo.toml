@@ -6,7 +6,6 @@ members = [
     "crates/wpx-auth",
     "crates/wpx-config",
     "crates/wpx-output",
-    "crates/wpx-mcp",
 ]
 resolver = "2"
 
@@ -59,7 +58,7 @@ wpx-api = { path = "crates/wpx-api" }
 wpx-auth = { path = "crates/wpx-auth" }
 wpx-config = { path = "crates/wpx-config" }
 wpx-output = { path = "crates/wpx-output" }
-wpx-mcp = { path = "crates/wpx-mcp" }
+
 
 # Dev dependencies
 wiremock = "0.6"
