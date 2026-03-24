@@ -210,8 +210,8 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
             let cmd = Cli::command();
             if let Some(dir) = dir {
                 // Generate all man pages to a directory
-                std::fs::create_dir_all(&dir).map_err(|e| WpxError::Other(e.to_string()))?;
-                generate_man_pages(&cmd, &dir)?;
+                std::fs::create_dir_all(dir).map_err(|e| WpxError::Other(e.to_string()))?;
+                generate_man_pages(&cmd, dir)?;
                 Ok(RenderPayload {
                     data: serde_json::json!({"status": "generated", "directory": dir}),
                     summary: Some(format!("Man pages generated in {dir}/")),

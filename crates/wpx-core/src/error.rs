@@ -147,11 +147,12 @@ impl WpxError {
                 obj["id"] = json!(id);
                 obj["suggestion"] = json!(format!("Use 'wpx {} list' to find valid IDs", resource));
             }
-            Self::RateLimited { retry_after_secs } => {
-                if let Some(secs) = retry_after_secs {
-                    obj["retry_after_secs"] = json!(secs);
-                }
+            Self::RateLimited {
+                retry_after_secs: Some(secs),
+            } => {
+                obj["retry_after_secs"] = json!(secs);
             }
+            Self::RateLimited { .. } => {}
             Self::Validation { field, .. } => {
                 obj["field"] = json!(field);
             }

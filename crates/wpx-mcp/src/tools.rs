@@ -198,7 +198,7 @@ pub fn generate_tools() -> Vec<ToolDef> {
     entries
         .into_iter()
         .map(|(cmd, desc, schema)| ToolDef {
-            name: format!("wpx_{}", cmd.replace(' ', "_").replace('-', "_")),
+            name: format!("wpx_{}", cmd.replace([' ', '-'], "_")),
             description: desc.to_string(),
             input_schema: schema,
         })

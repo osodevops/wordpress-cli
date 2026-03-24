@@ -1,9 +1,10 @@
 use clap::ValueEnum;
 
 /// Output format for command results.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
 pub enum OutputFormat {
     /// Automatically detect: table if TTY, JSON if piped.
+    #[default]
     Auto,
     /// Pretty-printed JSON.
     Json,
@@ -15,12 +16,6 @@ pub enum OutputFormat {
     Yaml,
     /// Newline-delimited JSON (one JSON object per line).
     Ndjson,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 impl OutputFormat {

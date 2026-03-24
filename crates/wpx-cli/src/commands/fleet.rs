@@ -96,15 +96,22 @@ async fn handle_exec(
         let parts: Vec<String> = parts.iter().map(|s| s.to_string()).collect();
         let config = WpxConfig::load();
         let store = CredentialStore::load();
-        let dry_run = dry_run;
-        let timeout = timeout;
+        let dry_run_flag = dry_run;
+        let timeout_val = timeout;
 
         let handle = tokio::spawn(async move {
             let _permit = sem.acquire().await.unwrap();
             let start = Instant::now();
 
-            let result =
-                execute_on_site(&site_name, &parts, &config, &store, dry_run, timeout).await;
+            let result = execute_on_site(
+                &site_name,
+                &parts,
+                &config,
+                &store,
+                dry_run_flag,
+                timeout_val,
+            )
+            .await;
             let duration = start.elapsed();
 
             let profile = config.get_site(&site_name);
