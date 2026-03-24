@@ -1,0 +1,66 @@
+[workspace]
+members = [
+    "crates/wpx-cli",
+    "crates/wpx-core",
+    "crates/wpx-api",
+    "crates/wpx-auth",
+    "crates/wpx-config",
+    "crates/wpx-output",
+    "crates/wpx-mcp",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/osodevops/wpx"
+
+[workspace.dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# Async / HTTP
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+csv = "1.3"
+
+# Output
+tabled = "0.16"
+indicatif = "0.17"
+
+# Error handling
+thiserror = "2"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Auth / Config
+keyring = { version = "3", features = ["apple-native", "linux-native"] }
+url = "2"
+open = "5"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+
+# Internal crates
+wpx-core = { path = "crates/wpx-core" }
+wpx-api = { path = "crates/wpx-api" }
+wpx-auth = { path = "crates/wpx-auth" }
+wpx-config = { path = "crates/wpx-config" }
+wpx-output = { path = "crates/wpx-output" }
+wpx-mcp = { path = "crates/wpx-mcp" }
+
+# Dev dependencies
+wiremock = "0.6"
+assert_cmd = "2.0"
+predicates = "3.0"

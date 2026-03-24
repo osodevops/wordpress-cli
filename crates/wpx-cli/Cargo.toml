@@ -1,0 +1,28 @@
+[package]
+name = "wpx"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "wpx"
+path = "src/main.rs"
+
+[dependencies]
+wpx-core = { workspace = true }
+wpx-api = { workspace = true }
+wpx-auth = { workspace = true }
+wpx-config = { workspace = true }
+wpx-output = { workspace = true }
+wpx-mcp = { workspace = true }
+clap = { workspace = true }
+clap_complete = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+predicates = { workspace = true }

@@ -1,0 +1,14 @@
+[package]
+name = "wpx-output"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+wpx-core = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+csv = { workspace = true }
+tabled = { workspace = true }
+thiserror = { workspace = true }

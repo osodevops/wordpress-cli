@@ -1,0 +1,15 @@
+/target
+**/*.rs.bk
+*.pdb
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Config (don't commit real credentials)
+.wpx.toml
