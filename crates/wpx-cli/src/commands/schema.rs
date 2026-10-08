@@ -30,11 +30,15 @@ fn schemas() -> Vec<SchemaEntry> {
     vec![
         SchemaEntry {
             command: "post list",
-            description: "List posts with optional filters",
+            description: "List posts with optional filters (any post type via `type`)",
             input: json!({
                 "type": "object",
                 "properties": {
+                    "type": { "type": "string", "description": "Post type slug; resolved via wp/v2/types/{slug} to its REST base (default: post)" },
+                    "rest_base": { "type": "string", "description": "REST collection path to use instead of resolving `type` (e.g. blog, wc/v3/products)" },
                     "status": { "type": "string", "enum": ["publish", "draft", "pending", "private", "future", "trash"] },
+                    "slug": { "type": "string" },
+                    "context": { "type": "string", "enum": ["view", "edit", "embed"] },
                     "search": { "type": "string" },
                     "author": { "type": "integer" },
                     "per_page": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 },
@@ -50,8 +54,13 @@ fn schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             command: "post get",
-            description: "Get a single post by ID",
-            input: json!({ "type": "object", "properties": { "id": { "type": "integer" } }, "required": ["id"] }),
+            description: "Get a single post by ID (any post type via `type`; `context: edit` returns content.raw)",
+            input: json!({ "type": "object", "properties": {
+                "id": { "type": "integer" },
+                "type": { "type": "string" },
+                "rest_base": { "type": "string" },
+                "context": { "type": "string", "enum": ["view", "edit", "embed"] }
+            }, "required": ["id"] }),
             output: json!({ "type": "object", "properties": {
                 "id": { "type": "integer" }, "title": { "type": "object" }, "status": { "type": "string" },
                 "content": { "type": "object" }, "date": { "type": "string" }
@@ -59,47 +68,74 @@ fn schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             command: "post create",
-            description: "Create a new post",
+            description: "Create a new post (any post type via `type`; unknown keys pass through to WordPress)",
             input: json!({ "type": "object", "properties": {
-                "title": { "type": "string" }, "content": { "type": "string" },
-                "status": { "type": "string", "enum": ["publish", "draft", "pending", "private"] },
-                "author": { "type": "integer" }, "excerpt": { "type": "string" }
-            }}),
+                "type": { "type": "string", "description": "Post type slug (default: post)" },
+                "rest_base": { "type": "string" },
+                "title": { "type": "string" },
+                "content": { "type": "string", "description": "HTML or block markup" },
+                "content_file": { "type": "string", "description": "CLI only: read content from a file, '-' for stdin" },
+                "status": { "type": "string", "enum": ["publish", "draft", "pending", "private", "future"] },
+                "author": { "type": "integer" }, "excerpt": { "type": "string" }, "slug": { "type": "string" },
+                "template": { "type": "string", "description": "Template file name, e.g. template-landing.php" },
+                "featured_media": { "type": "integer", "description": "Attachment ID" },
+                "meta": { "type": "object", "description": "Post meta (keys registered with show_in_rest)" },
+                "acf": { "type": "object", "description": "ACF fields (field groups exposed with show_in_rest)" }
+            }, "additionalProperties": { "description": "Custom taxonomies (e.g. blog_category: [9]) and other REST fields are passed through verbatim" } }),
             output: json!({ "type": "object" }),
         },
         SchemaEntry {
             command: "post update",
-            description: "Update an existing post",
+            description: "Update an existing post (any post type via `type`; same body as post create)",
             input: json!({ "type": "object", "properties": {
-                "id": { "type": "integer" }, "title": { "type": "string" },
-                "content": { "type": "string" }, "status": { "type": "string" }
-            }, "required": ["id"] }),
+                "id": { "type": "integer" }, "type": { "type": "string" }, "rest_base": { "type": "string" },
+                "title": { "type": "string" }, "content": { "type": "string" }, "content_file": { "type": "string" },
+                "status": { "type": "string" }, "template": { "type": "string" }, "featured_media": { "type": "integer" },
+                "meta": { "type": "object" }, "acf": { "type": "object" }
+            }, "required": ["id"], "additionalProperties": true }),
             output: json!({ "type": "object" }),
         },
         SchemaEntry {
             command: "post delete",
-            description: "Delete or trash a post",
+            description: "Delete or trash a post (any post type via `type`)",
             input: json!({ "type": "object", "properties": {
-                "id": { "type": "integer" }, "force": { "type": "boolean", "default": false }
+                "id": { "type": "integer" }, "type": { "type": "string" }, "rest_base": { "type": "string" },
+                "force": { "type": "boolean", "default": false }
             }, "required": ["id"] }),
             output: json!({ "type": "object" }),
         },
         SchemaEntry {
             command: "page list",
             description: "List pages",
-            input: json!({"type":"object","properties":{"status":{"type":"string"},"per_page":{"type":"integer"}}}),
+            input: json!({"type":"object","properties":{"status":{"type":"string"},"slug":{"type":"string"},"per_page":{"type":"integer"},"context":{"type":"string","enum":["view","edit","embed"]}}}),
             output: json!({"type":"array"}),
         },
         SchemaEntry {
             command: "page get",
-            description: "Get a page by ID",
-            input: json!({"type":"object","properties":{"id":{"type":"integer"}},"required":["id"]}),
+            description: "Get a page by ID (`context: edit` returns content.raw)",
+            input: json!({"type":"object","properties":{"id":{"type":"integer"},"context":{"type":"string","enum":["view","edit","embed"]}},"required":["id"]}),
             output: json!({"type":"object"}),
         },
         SchemaEntry {
             command: "page create",
-            description: "Create a page",
-            input: json!({"type":"object","properties":{"title":{"type":"string"},"content":{"type":"string"},"status":{"type":"string"}}}),
+            description: "Create a page (unknown keys such as acf/meta pass through to WordPress)",
+            input: json!({"type":"object","properties":{
+                "title":{"type":"string"},"content":{"type":"string"},
+                "content_file":{"type":"string","description":"CLI only: read content from a file, '-' for stdin"},
+                "status":{"type":"string"},"slug":{"type":"string"},"parent":{"type":"integer"},"menu_order":{"type":"integer"},
+                "template":{"type":"string"},"featured_media":{"type":"integer"},
+                "meta":{"type":"object"},"acf":{"type":"object"}
+            },"additionalProperties":true}),
+            output: json!({"type":"object"}),
+        },
+        SchemaEntry {
+            command: "page update",
+            description: "Update a page (same body as page create)",
+            input: json!({"type":"object","properties":{
+                "id":{"type":"integer"},"title":{"type":"string"},"content":{"type":"string"},"content_file":{"type":"string"},
+                "status":{"type":"string"},"template":{"type":"string"},"featured_media":{"type":"integer"},
+                "meta":{"type":"object"},"acf":{"type":"object"}
+            },"required":["id"],"additionalProperties":true}),
             output: json!({"type":"object"}),
         },
         SchemaEntry {
@@ -113,6 +149,28 @@ fn schemas() -> Vec<SchemaEntry> {
             description: "Get a media item by ID",
             input: json!({"type":"object","properties":{"id":{"type":"integer"}},"required":["id"]}),
             output: json!({"type":"object"}),
+        },
+        SchemaEntry {
+            command: "media upload",
+            description: "Upload a local file to the media library (multipart POST wp/v2/media)",
+            input: json!({"type":"object","properties":{
+                "file":{"type":"string","description":"Local file path"},
+                "title":{"type":"string"},"alt_text":{"type":"string"},"caption":{"type":"string"},
+                "description":{"type":"string"},"post":{"type":"integer","description":"Attach to post ID"},
+                "mime_type":{"type":"string","description":"Override the MIME type guessed from the extension"}
+            },"required":["file"]}),
+            output: json!({"type":"object","properties":{"id":{"type":"integer"},"source_url":{"type":"string"},"mime_type":{"type":"string"}}}),
+        },
+        SchemaEntry {
+            command: "api",
+            description: "Call any REST route under /wp-json/ (escape hatch for routes without a typed command)",
+            input: json!({"type":"object","properties":{
+                "method":{"type":"string","enum":["GET","POST","PUT","PATCH","DELETE"],"default":"GET"},
+                "path":{"type":"string","description":"Route relative to /wp-json/, e.g. wp/v2/types/blog or rankmath/v1/updateMeta"},
+                "query":{"type":"object","description":"Query parameters (CLI: repeatable --query key=value)"},
+                "body":{"description":"JSON request body (CLI: --data '<json>' or --json for stdin)"}
+            },"required":["path"]}),
+            output: json!({"description":"Raw JSON response from WordPress"}),
         },
         SchemaEntry {
             command: "user list",

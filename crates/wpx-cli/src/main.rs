@@ -3,6 +3,7 @@ mod commands;
 mod context;
 mod crud;
 pub mod dispatch;
+mod input;
 
 use clap::{CommandFactory, Parser};
 use cli::{Cli, Commands};
@@ -131,6 +132,10 @@ async fn run(cli: &Cli) -> Result<RenderPayload, WpxError> {
         Commands::Search { query, args } => {
             let client = context::build_client(&cli.global)?;
             commands::search::handle(query, args, &client).await
+        }
+        Commands::Api(args) => {
+            let client = context::build_client(&cli.global)?;
+            commands::api::handle(args, &client, cli.global.dry_run).await
         }
         Commands::Settings { command } | Commands::Option { command } => {
             let client = context::build_client(&cli.global)?;
