@@ -111,15 +111,20 @@ wordpress-cli/
 │           │                          #   AuthCommands
 │           ├── context.rs            # build_client(): resolves site profile + credentials -> WpClient
 │           ├── crud.rs               # Generic CRUD helpers: list, get, create, update, delete,
-│           │                          #   list_all_pages (streaming NDJSON), list_object_keyed,
-│           │                          #   get_by_slug, to_query_params, object_values_to_array
+│           │                          #   *_at variants taking an explicit api_path (custom post types),
+│           │                          #   list_all_pages_at (streaming NDJSON), list_object_keyed,
+│           │                          #   get_by_slug, resolve_post_type_path, to_query_params
+│           ├── input.rs              # json_from_stdin, resolve_content (--content/--content-file/-),
+│           │                          #   parse_key_values (--query k=v)
 │           ├── dispatch.rs           # Unified dispatcher: dispatch(command_path, args, client, dry_run)
 │           │                          #   used by CLI and fleet exec
 │           └── commands/
 │               ├── mod.rs            # Module declarations
+│               ├── api.rs            # `wpx api <METHOD> <path>`: raw REST escape hatch (execute() shared with dispatch)
 │               ├── post.rs           # PostCommands: list, get, create, update, delete, search
+│               │                      #   PostTypeArgs (--type/--rest-base) routes to any post type's rest_base
 │               ├── page.rs           # PageCommands: list, get, create, update, delete
-│               ├── media.rs          # MediaCommands: list, get, upload, delete
+│               ├── media.rs          # MediaCommands: list, get, upload, update, delete
 │               ├── user.rs           # UserCommands: list, get, me
 │               ├── comment.rs        # CommentCommands: list, get, create, update, delete
 │               ├── category.rs       # CategoryCommands: list, get, create, update, delete
@@ -211,15 +216,35 @@ Located in `crates/wpx-cli/src/crud.rs`. All are generic over `R: Resource`:
 | Helper | Signature | Notes |
 |--------|-----------|-------|
 | `list<R>` | `(client, params) -> RenderPayload` | Converts params to query string via `to_query_params()` |
-| `list_all_pages<R>` | `(client, params) -> RenderPayload` | Streams all pages as NDJSON to stdout (100/page) |
+| `list_at<R>` | `(client, api_path, params) -> RenderPayload` | Same, against an explicit collection path |
+| `list_all_pages_at<R>` | `(client, api_path, params) -> RenderPayload` | Streams all pages as NDJSON to stdout (100/page) |
 | `list_object_keyed<R>` | `(client, api_path) -> RenderPayload` | For endpoints returning `{slug: {...}}` instead of arrays |
 | `get<R>` | `(client, id) -> RenderPayload` | GET `{API_PATH}/{id}` |
+| `get_at<R>` | `(client, api_path, id, params) -> RenderPayload` | GET `{api_path}/{id}?{params}` (e.g. `context=edit` for `content.raw`) |
 | `get_by_slug<R>` | `(client, api_path, slug) -> RenderPayload` | GET `{api_path}/{slug}` |
 | `create<R>` | `(client, body, dry_run) -> RenderPayload` | POST to `API_PATH`; dry_run returns what would be created |
+| `create_at<R>` | `(client, api_path, body, dry_run) -> RenderPayload` | POST to `api_path` |
 | `update<R>` | `(client, id, body, dry_run) -> RenderPayload` | POST to `{API_PATH}/{id}` |
+| `update_at<R>` | `(client, api_path, id, body, dry_run) -> RenderPayload` | POST to `{api_path}/{id}` |
 | `delete<R>` | `(client, id, force, dry_run) -> RenderPayload` | DELETE; force=true permanently deletes, false trashes |
+| `delete_at<R>` | `(client, api_path, id, force, dry_run) -> RenderPayload` | DELETE `{api_path}/{id}` |
+| `resolve_post_type_path` | `(client, post_type, rest_base) -> String` | `None`/`post` → `wp/v2/posts`, `page` → `wp/v2/pages`, else `GET wp/v2/types/{slug}` → `{rest_namespace}/{rest_base}`; `rest_base` skips the lookup |
 
-The `to_query_params()` helper serializes any `Serialize` struct to `Vec<(String, String)>`, skipping `None` values. This is why list args structs derive both `Args` (for clap) and `Serialize` (for query params).
+The non-`_at` helpers are one-line wrappers that pass `R::API_PATH`. The `_at` variants exist so one `Resource` struct (e.g. `Post`) can be used against any post type's collection (`wp/v2/blog`, `wp/v2/case-studies`), which is how `--type` / `--rest-base` work on `post` commands.
+
+The `to_query_params()` helper serializes any `Serialize` struct to `Vec<(String, String)>`, skipping `None` values. This is why list args structs derive both `Args` (for clap) and `Serialize` (for query params). Routing-only args (`PostTypeArgs`) are `#[serde(skip)]` so they never leak into the query string.
+
+### Passthrough Params
+
+`PostCreateParams` / `PageCreateParams` carry `template`, `featured_media`, `meta`, `acf` and a `#[serde(flatten)] extra: Map<String, Value>`. A `--json` stdin payload therefore reaches WordPress verbatim (custom taxonomies like `blog_category`, plugin fields, ...) instead of being trimmed to known keys. The `Post` / `Page` response structs flatten unknown keys the same way, so `--fields` masks can select any key WordPress returns.
+
+### Raw Routes (`wpx api`)
+
+`commands/api.rs` wraps `WpClient::request_raw(method, path, params, body)`: any verb, any route under `/wp-json/`, JSON body from `--data` or stdin (`--json`), query params via repeatable `--query k=v`. Non-GET requests honour `--dry-run`. The same `execute()` backs the `["api"]` dispatch route (`{"method","path","query","body"}`) for fleet use.
+
+### Media Upload
+
+`WpClient::upload_file(path, file_name, bytes, mime, fields)` builds the multipart form (file part + text fields) on top of `post_multipart`; `mime_from_extension()` guesses the MIME type without a dependency. `wpx media upload <file> [--title --alt-text --caption --description --post --mime-type]`.
 
 ### API Response Format
 
@@ -242,7 +267,9 @@ pub struct ApiResponse<T> {
 
 Signature: `dispatch(command_path: &[&str], args: &Value, client: &WpClient, dry_run: bool) -> Result<RenderPayload, WpxError>`
 
-Command paths are string slices like `["post", "list"]`, `["plugin", "activate"]`, `["search"]`.
+Command paths are string slices like `["post", "list"]`, `["plugin", "activate"]`, `["search"]`, `["api"]`, `["media", "upload"]`.
+
+`["post", *]` routes read `type` / `rest_base` from args (resolved via `resolve_post_type_path`) and strip `type`, `rest_base` and `id` from the body before sending (`type` is read-only in the REST schema; `id` on create triggers `rest_post_exists`).
 
 ## Configuration
 
@@ -296,6 +323,8 @@ token_url = "https://staging.example.com/oauth/token"
 |----------|-------------|---------|
 | `WPX_SITE` | Target site profile name | `default` |
 | `WPX_URL` | Direct URL override (skips profile lookup) | — |
+| `WPX_USERNAME` | Username for application-password auth; overrides `credentials.toml` for every site | — |
+| `WPX_PASSWORD` | Application password (alias `WPX_APP_PASSWORD`); both must be set to take effect. With `WPX_URL`, no profile or credentials file is needed (CI) | — |
 | `WPX_OUTPUT` | Output format: json, table, csv, yaml, ndjson, auto | `auto` |
 | `WPX_TIMEOUT` | Request timeout in seconds | `30` |
 | `WPX_RETRIES` | Retry count for failed requests | `3` |

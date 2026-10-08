@@ -75,15 +75,40 @@ wpx post create --site production --title "Hello from wpx" --status draft
 wpx search "migration guide" --site production
 ```
 
+### Custom Post Types, Content Files, Media and Raw Routes
+
+```bash
+# Any post type exposed in REST: --type resolves wp/v2/types/<slug> to its rest_base
+wpx post list --type blog --per-page 5
+wpx post get 6166 --type blog --context edit --fields id,slug,content.raw,acf,meta
+
+# Push block markup from a file (or "-" for stdin); unknown JSON keys pass through verbatim
+wpx post create --type blog --title "Hello" --status draft --content-file ./post.html
+echo '{"title":"Hi","status":"draft","blog_category":[9],"acf":{"hero":{"title":"x"}}}' \
+  | wpx post create --type blog --json
+
+# Pages: template + featured image + ACF/meta via --json
+wpx page update 4338 --template template-kafka-services.php --featured-media 6168 --content-file page.html
+
+# Upload media
+wpx media upload ./hero.png --title "Hero" --alt-text "Kafka cluster diagram"
+
+# Anything else: raw REST route (relative to /wp-json/)
+wpx api GET wp/v2/types/blog --fields rest_base
+wpx api POST rankmath/v1/updateMeta --data '{"objectType":"post","objectID":42,"meta":{"rank_math_title":"x"}}'
+```
+
+Every write honours `--dry-run`.
+
 ## Command Reference
 
 ### Content
 
 | Command | Description | Subcommands |
 |---------|-------------|-------------|
-| `post` | Manage posts | `list`, `get`, `create`, `update`, `delete`, `search` |
+| `post` | Manage posts of any type (`--type blog`, `--type page`, ...) | `list`, `get`, `create`, `update`, `delete`, `search` |
 | `page` | Manage pages | `list`, `get`, `create`, `update`, `delete` |
-| `media` | Manage media attachments | `list`, `get`, `update`, `delete` |
+| `media` | Manage media attachments | `list`, `get`, `upload`, `update`, `delete` |
 | `comment` | Manage comments | `list`, `get`, `create`, `update`, `delete` |
 | `block` | Manage reusable blocks | `list`, `get`, `create`, `update`, `delete`, `search`, `render` |
 | `search` | Global search across content | *(direct command -- takes a query argument)* |
@@ -138,6 +163,7 @@ wpx search "migration guide" --site production
 | `post-status` | List and inspect post statuses | `list`, `get` |
 | `discover` | Probe a site's REST API capabilities | *(direct command -- takes a URL argument)* |
 | `schema` | Show JSON Schema for a command | *(direct command -- takes a command path)* |
+| `api` | Call any REST route under `/wp-json/` | *(direct command -- `api <METHOD> <path>`)* |
 
 ### Utilities
 
@@ -200,6 +226,8 @@ username = "editor"
 |----------|-------------|
 | `WPX_SITE` | Default site profile name |
 | `WPX_URL` | Direct WordPress URL (bypasses profile lookup) |
+| `WPX_USERNAME` | Username for application-password auth (overrides `credentials.toml`) |
+| `WPX_PASSWORD` | Application password (alias: `WPX_APP_PASSWORD`); with `WPX_URL` no site profile is needed -- ideal for CI |
 | `WPX_OUTPUT` | Default output format |
 | `WPX_TIMEOUT` | Request timeout in seconds |
 | `WPX_RETRIES` | Retry count for failed requests |
@@ -226,6 +254,14 @@ WordPress 5.6+ supports Application Passwords natively. No plugins required.
 
 ```bash
 wpx auth set --site production --username admin --password "XXXX XXXX XXXX XXXX"
+```
+
+`auth set` stores the password; the site URL comes from a `[sites.production]` profile in
+`~/.config/wpx/config.toml` or a project `.wpx.toml`. For CI, skip the files entirely:
+
+```bash
+export WPX_URL=https://example.com WPX_USERNAME=ci-bot WPX_PASSWORD="xxxx xxxx xxxx xxxx"
+wpx auth test
 ```
 
 ### OAuth 2.1
