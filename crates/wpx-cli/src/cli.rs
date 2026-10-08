@@ -48,11 +48,23 @@ pub struct GlobalFlags {
     pub fields: Option<Vec<String>>,
 
     /// Disable colored output.
-    #[arg(long, env = "NO_COLOR", global = true)]
+    #[arg(
+        long,
+        env = "NO_COLOR",
+        global = true,
+        action = clap::ArgAction::SetTrue,
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub no_color: bool,
 
     /// Disable all interactive prompts.
-    #[arg(long, env = "WPX_NO_PROMPT", global = true)]
+    #[arg(
+        long,
+        env = "WPX_NO_PROMPT",
+        global = true,
+        action = clap::ArgAction::SetTrue,
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub no_prompt: bool,
 
     /// Suppress non-essential output.
