@@ -235,6 +235,9 @@ pub enum Commands {
         args: crate::commands::search::SearchArgs,
     },
 
+    /// Call any REST route directly: wpx api GET wp/v2/types/blog
+    Api(crate::commands::api::ApiArgs),
+
     /// Manage site settings / options.
     Settings {
         #[command(subcommand)]

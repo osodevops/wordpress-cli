@@ -16,27 +16,44 @@ pub async fn dispatch(
     dry_run: bool,
 ) -> Result<RenderPayload, WpxError> {
     match command_path {
-        // Posts
+        // Posts (honour `type` / `rest_base` in args for custom post types)
         ["post", "list"] => {
+            let path = post_type_path(client, args).await?;
             let params: crate::commands::post::PostListArgs =
                 serde_json::from_value(args.clone()).unwrap_or_default();
-            crate::crud::list::<wpx_core::resources::post::Post>(client, &params).await
+            crate::crud::list_at::<wpx_core::resources::post::Post>(client, &path, &params).await
         }
         ["post", "get"] => {
+            let path = post_type_path(client, args).await?;
             let id = args_id(args)?;
-            crate::crud::get::<wpx_core::resources::post::Post>(client, id).await
+            let context = args.get("context").and_then(|v| v.as_str());
+            let params: Vec<(&str, &str)> =
+                context.map(|c| vec![("context", c)]).unwrap_or_default();
+            crate::crud::get_at::<wpx_core::resources::post::Post>(client, &path, id, &params).await
         }
         ["post", "create"] => {
-            crate::crud::create::<wpx_core::resources::post::Post>(client, args, dry_run).await
+            let path = post_type_path(client, args).await?;
+            let body = strip_routing_keys(args);
+            crate::crud::create_at::<wpx_core::resources::post::Post>(client, &path, &body, dry_run)
+                .await
         }
         ["post", "update"] => {
+            let path = post_type_path(client, args).await?;
             let id = args_id(args)?;
-            crate::crud::update::<wpx_core::resources::post::Post>(client, id, args, dry_run).await
+            let body = strip_routing_keys(args);
+            crate::crud::update_at::<wpx_core::resources::post::Post>(
+                client, &path, id, &body, dry_run,
+            )
+            .await
         }
         ["post", "delete"] => {
+            let path = post_type_path(client, args).await?;
             let id = args_id(args)?;
             let force = args.get("force").and_then(|v| v.as_bool()).unwrap_or(false);
-            crate::crud::delete::<wpx_core::resources::post::Post>(client, id, force, dry_run).await
+            crate::crud::delete_at::<wpx_core::resources::post::Post>(
+                client, &path, id, force, dry_run,
+            )
+            .await
         }
 
         // Pages
@@ -111,6 +128,42 @@ pub async fn dispatch(
         ["media", "get"] => {
             let id = args_id(args)?;
             crate::crud::get::<wpx_core::resources::media::Media>(client, id).await
+        }
+        ["media", "upload"] => {
+            let upload_args: crate::commands::media::MediaUploadArgs =
+                serde_json::from_value(args.clone()).map_err(|e| WpxError::Validation {
+                    field: "file".into(),
+                    message: format!("media upload needs a 'file' argument: {e}"),
+                })?;
+            commands::media::upload(&upload_args, client, dry_run).await
+        }
+
+        // Raw REST escape hatch: {"method": "GET", "path": "wp/v2/...", "query": {..}, "body": {..}}
+        ["api"] => {
+            let method = args
+                .get("method")
+                .and_then(|v| v.as_str())
+                .unwrap_or("GET")
+                .to_ascii_uppercase();
+            let path = args_str(args, "path")?;
+            let path = path.trim().trim_start_matches('/').to_string();
+            let query: Vec<(String, String)> = args
+                .get("query")
+                .and_then(|v| v.as_object())
+                .map(|obj| {
+                    obj.iter()
+                        .map(|(k, v)| {
+                            let value = match v {
+                                Value::String(s) => s.clone(),
+                                other => other.to_string(),
+                            };
+                            (k.clone(), value)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            let body = args.get("body").or_else(|| args.get("data"));
+            commands::api::execute(client, &method, &path, &query, body, dry_run).await
         }
 
         // Plugins
@@ -281,6 +334,30 @@ pub async fn dispatch(
     }
 }
 
+/// Resolve the collection path for post commands from `type` / `rest_base` args.
+async fn post_type_path(client: &WpClient, args: &Value) -> Result<String, WpxError> {
+    let post_type = args.get("type").and_then(|v| v.as_str());
+    let rest_base = args.get("rest_base").and_then(|v| v.as_str());
+    crate::crud::resolve_post_type_path(client, post_type, rest_base).await
+}
+
+/// Remove routing-only keys (`type`, `rest_base`, `id`) before sending a body.
+///
+/// `type` is read-only in the REST schema and `id` on create triggers
+/// `rest_post_exists`, so neither may leak into the request body.
+fn strip_routing_keys(args: &Value) -> Value {
+    match args {
+        Value::Object(map) => {
+            let mut body = map.clone();
+            body.remove("type");
+            body.remove("rest_base");
+            body.remove("id");
+            Value::Object(body)
+        }
+        other => other.clone(),
+    }
+}
+
 /// Extract a numeric ID from args.
 fn args_id(args: &Value) -> Result<u64, WpxError> {
     args.get("id")
@@ -322,5 +399,91 @@ mod tests {
 
         let args = json!({"id": 1});
         assert!(args_str(&args, "slug").is_err());
+    }
+
+    #[test]
+    fn strip_routing_keys_removes_type_rest_base_and_id() {
+        let args =
+            json!({"id": 5, "type": "blog", "rest_base": "blog", "title": "x", "acf": {"a": 1}});
+        let body = strip_routing_keys(&args);
+        assert_eq!(body, json!({"title": "x", "acf": {"a": 1}}));
+    }
+
+    fn client_for(server: &wiremock::MockServer) -> WpClient {
+        WpClient::new(
+            url::Url::parse(&server.uri()).unwrap(),
+            Box::new(wpx_auth::NoAuth),
+            5,
+            0,
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn dispatch_api_get() {
+        use wiremock::matchers::{method, path, query_param};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/wp-json/wp/v2/types/blog"))
+            .and(query_param("context", "view"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"rest_base": "blog"})))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let args =
+            json!({"method": "get", "path": "/wp/v2/types/blog", "query": {"context": "view"}});
+        let payload = dispatch(&["api"], &args, &client_for(&server), false)
+            .await
+            .unwrap();
+        assert_eq!(payload.data["rest_base"], "blog");
+    }
+
+    #[tokio::test]
+    async fn dispatch_api_post_dry_run() {
+        let server = wiremock::MockServer::start().await;
+        let args = json!({"method": "POST", "path": "wp/v2/posts", "body": {"title": "x"}});
+        let payload = dispatch(&["api"], &args, &client_for(&server), true)
+            .await
+            .unwrap();
+        assert_eq!(payload.data["dry_run"], true);
+        assert_eq!(payload.data["body"]["title"], "x");
+        assert!(server.received_requests().await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn dispatch_post_list_routes_custom_type() {
+        use wiremock::matchers::{method, path, query_param};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/wp-json/wp/v2/types/blog"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "slug": "blog", "rest_base": "blog", "rest_namespace": "wp/v2"
+            })))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/wp-json/wp/v2/blog"))
+            .and(query_param("per_page", "1"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("x-wp-total", "93")
+                    .set_body_json(json!([{"id": 6166, "type": "blog", "blog_category": [9]}])),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let args = json!({"type": "blog", "per_page": 1});
+        let payload = dispatch(&["post", "list"], &args, &client_for(&server), false)
+            .await
+            .unwrap();
+        assert_eq!(payload.data[0]["id"], 6166);
+        assert_eq!(payload.data[0]["blog_category"], json!([9]));
+        assert_eq!(payload.summary.as_deref(), Some("93 posts found"));
     }
 }
