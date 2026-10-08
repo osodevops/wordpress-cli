@@ -21,6 +21,20 @@ pub struct Post {
     pub sticky: Option<bool>,
     pub categories: Option<Vec<u64>>,
     pub tags: Option<Vec<u64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub featured_media: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acf: Option<serde_json::Value>,
+    /// Any additional fields returned by WordPress (custom taxonomies, plugin fields, ...).
+    ///
+    /// Custom post types expose their own keys (e.g. `blog_category`), which are preserved
+    /// here so `--fields` masks and JSON output never silently drop data.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 /// WordPress rendered content with raw and rendered variants.
@@ -62,6 +76,24 @@ pub struct PostCreateParams {
     pub categories: Option<Vec<u64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<u64>>,
+    /// Page/post template file name (e.g. `template-landing.php`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    /// Featured image attachment ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub featured_media: Option<u64>,
+    /// Post meta object (keys must be registered with `show_in_rest`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<serde_json::Value>,
+    /// ACF fields object (field groups exposed with `show_in_rest`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acf: Option<serde_json::Value>,
+    /// Any other keys (custom taxonomies such as `blog_category`, plugin fields, ...).
+    ///
+    /// Captured with `#[serde(flatten)]` so a `--json` payload is passed through to
+    /// WordPress verbatim instead of silently dropping unknown keys.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 /// Parameters for updating a post (same as create).
@@ -102,5 +134,49 @@ mod tests {
     fn resource_trait_constants() {
         assert_eq!(Post::NAME, "post");
         assert_eq!(Post::API_PATH, "wp/v2/posts");
+    }
+
+    #[test]
+    fn create_params_preserve_unknown_keys() {
+        let input = serde_json::json!({
+            "title": "x",
+            "blog_category": [9],
+            "acf": {"a": 1},
+            "template": "t.php",
+            "featured_media": 6168,
+            "meta": {"rank_math_title": "SEO"}
+        });
+        let params: PostCreateParams = serde_json::from_value(input.clone()).unwrap();
+        assert_eq!(params.title.as_deref(), Some("x"));
+        assert_eq!(params.template.as_deref(), Some("t.php"));
+        assert_eq!(params.featured_media, Some(6168));
+        assert_eq!(params.acf, Some(serde_json::json!({"a": 1})));
+        assert_eq!(
+            params.extra.get("blog_category"),
+            Some(&serde_json::json!([9]))
+        );
+
+        let output = serde_json::to_value(&params).unwrap();
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn create_params_default_serializes_empty_object() {
+        let params = PostCreateParams::default();
+        assert_eq!(
+            serde_json::to_value(&params).unwrap(),
+            serde_json::json!({})
+        );
+    }
+
+    #[test]
+    fn deserialize_post_keeps_custom_taxonomy() {
+        let json = r#"{"id": 7, "type": "blog", "blog_category": [9], "acf": []}"#;
+        let post: Post = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            post.extra.get("blog_category"),
+            Some(&serde_json::json!([9]))
+        );
+        assert_eq!(post.acf, Some(serde_json::json!([])));
     }
 }

@@ -20,6 +20,17 @@ pub struct Page {
     pub menu_order: Option<i32>,
     #[serde(rename = "type")]
     pub post_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub featured_media: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acf: Option<serde_json::Value>,
+    /// Any additional fields returned by WordPress, preserved verbatim.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 impl Resource for Page {
@@ -49,6 +60,39 @@ pub struct PageCreateParams {
     pub parent: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub menu_order: Option<i32>,
+    /// Page template file name (e.g. `template-services.php`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    /// Featured image attachment ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub featured_media: Option<u64>,
+    /// Post meta object (keys must be registered with `show_in_rest`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<serde_json::Value>,
+    /// ACF fields object (field groups exposed with `show_in_rest`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acf: Option<serde_json::Value>,
+    /// Any other keys, passed through to WordPress verbatim.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 pub type PageUpdateParams = PageCreateParams;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_params_round_trip() {
+        let input = serde_json::json!({
+            "title": "x",
+            "template": "template-services.php",
+            "acf": {"hero": {"title": "Hi"}},
+            "meta": {"rank_math_title": "SEO"},
+            "custom_key": "kept"
+        });
+        let params: PageCreateParams = serde_json::from_value(input.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&params).unwrap(), input);
+    }
+}
