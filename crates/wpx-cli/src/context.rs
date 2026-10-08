@@ -19,8 +19,8 @@ pub fn build_client(global: &GlobalFlags) -> Result<WpClient, WpxError> {
     } else {
         return Err(WpxError::Config {
             message: format!(
-                "Site '{}' not found. Use --url to specify a URL or configure the site with 'wpx auth set'.",
-                global.site
+                "Site '{}' not found. Use --url (or WPX_URL) to specify a URL, or add a [sites.{}] profile to ~/.config/wpx/config.toml or ./.wpx.toml.",
+                global.site, global.site
             ),
         });
     };
@@ -29,8 +29,9 @@ pub fn build_client(global: &GlobalFlags) -> Result<WpClient, WpxError> {
         message: format!("Invalid URL '{site_url}': {e}"),
     })?;
 
-    // Build auth provider based on credential type
-    let auth: Box<dyn AuthProvider> = if let Some(creds) = store.get(&global.site) {
+    // Build auth provider based on credential type.
+    // `resolve` prefers WPX_USERNAME / WPX_PASSWORD env vars over credentials.toml.
+    let auth: Box<dyn AuthProvider> = if let Some(creds) = store.resolve(&global.site) {
         match creds.auth_type.as_str() {
             "oauth2" => {
                 if let Some(token) = &creds.access_token {

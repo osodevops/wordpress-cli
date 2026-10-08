@@ -64,7 +64,7 @@ async fn handle_test(
     } else {
         return Err(WpxError::Config {
             message: format!(
-                "Site '{site_name}' not found in config. Use --url or configure the site first."
+                "Site '{site_name}' not found in config. Use --url (or WPX_URL), or add a [sites.{site_name}] profile to ~/.config/wpx/config.toml or ./.wpx.toml."
             ),
         });
     };
@@ -73,8 +73,8 @@ async fn handle_test(
         message: format!("Invalid URL '{site_url}': {e}"),
     })?;
 
-    // Build auth provider
-    let auth: Box<dyn wpx_auth::AuthProvider> = if let Some(creds) = store.get(site_name) {
+    // Build auth provider (env vars WPX_USERNAME / WPX_PASSWORD take precedence)
+    let auth: Box<dyn wpx_auth::AuthProvider> = if let Some(creds) = store.resolve(site_name) {
         Box::new(ApplicationPasswordAuth::new(
             creds.username.clone(),
             creds.password.clone(),
