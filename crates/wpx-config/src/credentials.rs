@@ -56,7 +56,47 @@ impl Default for SiteCredentials {
     }
 }
 
+/// Environment variable holding the username for `WPX_PASSWORD` / `WPX_APP_PASSWORD`.
+pub const ENV_USERNAME: &str = "WPX_USERNAME";
+/// Environment variable holding an application password (spaces are tolerated).
+pub const ENV_PASSWORD: &str = "WPX_PASSWORD";
+/// Alias for [`ENV_PASSWORD`], mirroring the WordPress UI terminology.
+pub const ENV_APP_PASSWORD: &str = "WPX_APP_PASSWORD";
+
+impl SiteCredentials {
+    /// Build application-password credentials from `WPX_USERNAME` and
+    /// `WPX_PASSWORD` (or `WPX_APP_PASSWORD`).
+    ///
+    /// Returns `None` unless both a username and a password are present. Intended for
+    /// CI and agent environments where writing `credentials.toml` is undesirable.
+    pub fn from_env() -> Option<Self> {
+        let username = std::env::var(ENV_USERNAME).ok().filter(|v| !v.is_empty())?;
+        let password = std::env::var(ENV_PASSWORD)
+            .ok()
+            .filter(|v| !v.is_empty())
+            .or_else(|| {
+                std::env::var(ENV_APP_PASSWORD)
+                    .ok()
+                    .filter(|v| !v.is_empty())
+            })?;
+        Some(Self {
+            username,
+            password,
+            ..Default::default()
+        })
+    }
+}
+
 impl CredentialStore {
+    /// Resolve credentials for a site: environment variables win over the store.
+    ///
+    /// Precedence follows the global rule (env vars > config files): if
+    /// `WPX_USERNAME` and `WPX_PASSWORD`/`WPX_APP_PASSWORD` are set they are used for
+    /// every site, otherwise the stored credentials for `site` (if any) are returned.
+    pub fn resolve(&self, site: &str) -> Option<SiteCredentials> {
+        SiteCredentials::from_env().or_else(|| self.get(site).cloned())
+    }
+
     /// Load credentials from the credentials file.
     pub fn load() -> Self {
         let path = match super::WpxConfig::credentials_path() {
@@ -136,6 +176,66 @@ mod tests {
         assert!(store.remove("prod"));
         assert!(store.get("prod").is_none());
     }
+
+    #[test]
+    fn resolve_prefers_store_when_env_unset() {
+        // Serialise access to process env across tests in this module.
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::remove_var(ENV_USERNAME);
+        std::env::remove_var(ENV_PASSWORD);
+        std::env::remove_var(ENV_APP_PASSWORD);
+
+        let mut store = CredentialStore::default();
+        store.set(
+            "prod".into(),
+            SiteCredentials {
+                username: "stored".into(),
+                password: "pw".into(),
+                ..Default::default()
+            },
+        );
+        assert_eq!(store.resolve("prod").unwrap().username, "stored");
+        assert!(store.resolve("missing").is_none());
+    }
+
+    #[test]
+    fn resolve_prefers_env_over_store() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::set_var(ENV_USERNAME, "ci-bot");
+        std::env::remove_var(ENV_PASSWORD);
+        std::env::set_var(ENV_APP_PASSWORD, "abcd efgh");
+
+        let mut store = CredentialStore::default();
+        store.set(
+            "prod".into(),
+            SiteCredentials {
+                username: "stored".into(),
+                password: "pw".into(),
+                ..Default::default()
+            },
+        );
+        let creds = store.resolve("prod").unwrap();
+        assert_eq!(creds.username, "ci-bot");
+        assert_eq!(creds.password, "abcd efgh");
+        assert_eq!(creds.auth_type, "application-password");
+        // Env credentials apply even when the site has no stored entry.
+        assert_eq!(store.resolve("other").unwrap().username, "ci-bot");
+
+        std::env::remove_var(ENV_USERNAME);
+        std::env::remove_var(ENV_APP_PASSWORD);
+    }
+
+    #[test]
+    fn from_env_requires_both_values() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::set_var(ENV_USERNAME, "ci-bot");
+        std::env::remove_var(ENV_PASSWORD);
+        std::env::remove_var(ENV_APP_PASSWORD);
+        assert!(SiteCredentials::from_env().is_none());
+        std::env::remove_var(ENV_USERNAME);
+    }
+
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn credential_store_serialization() {
