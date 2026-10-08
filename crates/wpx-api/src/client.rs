@@ -134,6 +134,93 @@ impl WpClient {
         self.parse_response(response).await
     }
 
+    /// Perform a PATCH request with a JSON body.
+    pub async fn patch<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<ApiResponse<T>, WpxError> {
+        let url = self.api_url(path)?;
+        debug!("PATCH {url}");
+
+        self.request_with_retry(|| {
+            let req = self.http.patch(url.clone()).json(body);
+            self.auth.authenticate(req)
+        })
+        .await
+    }
+
+    /// Perform an arbitrary request against any REST route.
+    ///
+    /// `method` is an HTTP verb (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), `path` is
+    /// relative to `/wp-json/` (e.g. `wp/v2/types/blog` or `rankmath/v1/updateMeta`),
+    /// `params` are appended as query string and `body` (if any) is sent as JSON.
+    /// This is the escape hatch behind `wpx api` for routes wpx has no typed command for.
+    pub async fn request_raw(
+        &self,
+        method: &str,
+        path: &str,
+        params: &[(&str, &str)],
+        body: Option<&serde_json::Value>,
+    ) -> Result<ApiResponse<serde_json::Value>, WpxError> {
+        let method = match method.to_ascii_uppercase().as_str() {
+            "GET" => reqwest::Method::GET,
+            "POST" => reqwest::Method::POST,
+            "PUT" => reqwest::Method::PUT,
+            "PATCH" => reqwest::Method::PATCH,
+            "DELETE" => reqwest::Method::DELETE,
+            "HEAD" => reqwest::Method::HEAD,
+            "OPTIONS" => reqwest::Method::OPTIONS,
+            other => {
+                return Err(WpxError::Validation {
+                    field: "method".into(),
+                    message: format!(
+                        "Unsupported HTTP method '{other}' (use GET, POST, PUT, PATCH, DELETE, HEAD or OPTIONS)"
+                    ),
+                })
+            }
+        };
+        let url = self.api_url(path)?;
+        debug!("{method} {url}");
+
+        self.request_with_retry(|| {
+            let mut req = self.http.request(method.clone(), url.clone()).query(params);
+            if let Some(body) = body {
+                req = req.json(body);
+            }
+            self.auth.authenticate(req)
+        })
+        .await
+    }
+
+    /// Upload a file as a multipart form (e.g. `POST wp/v2/media`).
+    ///
+    /// The file is sent in the `file` part with the given `file_name` and `mime` type;
+    /// `fields` become additional text parts (`title`, `alt_text`, `caption`, `post`, ...).
+    pub async fn upload_file<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        file_name: &str,
+        bytes: Vec<u8>,
+        mime: &str,
+        fields: &[(&str, String)],
+    ) -> Result<ApiResponse<T>, WpxError> {
+        let part = reqwest::multipart::Part::bytes(bytes)
+            .file_name(file_name.to_string())
+            .mime_str(mime)
+            .map_err(|e| WpxError::Validation {
+                field: "mime".into(),
+                message: format!("Invalid MIME type '{mime}': {e}"),
+            })?;
+
+        let mut form = reqwest::multipart::Form::new().part("file", part);
+        for (key, value) in fields {
+            form = form.text((*key).to_string(), value.clone());
+        }
+
+        self.post_multipart(path, form).await
+    }
+
     /// Execute a request with retry logic for transient failures.
     async fn request_with_retry<T, F>(&self, build_request: F) -> Result<ApiResponse<T>, WpxError>
     where
@@ -356,6 +443,45 @@ impl WpClient {
     }
 }
 
+/// Guess a MIME type from a file name's extension.
+///
+/// Covers the upload types WordPress allows by default; anything else falls back to
+/// `application/octet-stream` (WordPress will still sniff and validate server-side).
+pub fn mime_from_extension(file_name: &str) -> &'static str {
+    let ext = file_name
+        .rsplit('.')
+        .next()
+        .map(|e| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "webp" => "image/webp",
+        "avif" => "image/avif",
+        "ico" => "image/x-icon",
+        "pdf" => "application/pdf",
+        "mp4" | "m4v" => "video/mp4",
+        "webm" => "video/webm",
+        "mov" => "video/quicktime",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "ogg" => "audio/ogg",
+        "txt" => "text/plain",
+        "csv" => "text/csv",
+        "json" => "application/json",
+        "zip" => "application/zip",
+        "doc" => "application/msword",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls" => "application/vnd.ms-excel",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "ppt" => "application/vnd.ms-powerpoint",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        _ => "application/octet-stream",
+    }
+}
+
 struct RetryContext {
     #[allow(dead_code)]
     status: Option<StatusCode>,
@@ -433,6 +559,17 @@ mod tests {
         assert_eq!(client.backoff_delay(1, None), Duration::from_secs(2));
         assert_eq!(client.backoff_delay(2, None), Duration::from_secs(4));
         assert_eq!(client.backoff_delay(3, None), Duration::from_secs(8));
+    }
+
+    #[test]
+    fn mime_from_extension_table() {
+        assert_eq!(mime_from_extension("hero.PNG"), "image/png");
+        assert_eq!(mime_from_extension("a/b/photo.jpeg"), "image/jpeg");
+        assert_eq!(mime_from_extension("logo.svg"), "image/svg+xml");
+        assert_eq!(mime_from_extension("doc.pdf"), "application/pdf");
+        assert_eq!(mime_from_extension("clip.webm"), "video/webm");
+        assert_eq!(mime_from_extension("noext"), "application/octet-stream");
+        assert_eq!(mime_from_extension("weird.xyz"), "application/octet-stream");
     }
 
     #[test]
