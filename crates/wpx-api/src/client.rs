@@ -288,10 +288,18 @@ impl WpClient {
             let total = Self::parse_header_u64(&headers, "x-wp-total");
             let total_pages = Self::parse_header_u64(&headers, "x-wp-totalpages");
 
-            let data: T = response
-                .json()
+            let bytes = response
+                .bytes()
                 .await
-                .map_err(|e| WpxError::Other(format!("Failed to parse response: {e}")))?;
+                .map_err(|e| WpxError::Other(format!("Failed to read response: {e}")))?;
+            // HEAD and 204 responses carry no body; treat that as JSON `null` so
+            // callers expecting a `Value` (e.g. `wpx api HEAD ...`) still succeed.
+            let data: T = if bytes.iter().all(u8::is_ascii_whitespace) {
+                serde_json::from_str("null")
+            } else {
+                serde_json::from_slice(&bytes)
+            }
+            .map_err(|e| WpxError::Other(format!("Failed to parse response: {e}")))?;
 
             Ok(ApiResponse {
                 data,

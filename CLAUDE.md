@@ -335,7 +335,7 @@ token_url = "https://staging.example.com/oauth/token"
 
 All flags are available on every command via `--flag`:
 
-`--site`, `--url`, `--output`, `--fields` (comma-separated field mask), `--no-color`, `--no-prompt`, `--quiet`, `--verbose`, `--timeout`, `--retries`, `--dry-run`, `--confirm`, `--all-pages`
+`--site`, `--url`, `--output`, `--fields` (comma-separated field mask; dotted paths such as `content.raw` select nested keys), `--no-color`, `--no-prompt`, `--quiet`, `--verbose`, `--timeout`, `--retries`, `--dry-run`, `--confirm`, `--all-pages`
 
 ## Error Handling
 
