@@ -165,7 +165,7 @@ fn schemas() -> Vec<SchemaEntry> {
             command: "api",
             description: "Call any REST route under /wp-json/ (escape hatch for routes without a typed command)",
             input: json!({"type":"object","properties":{
-                "method":{"type":"string","enum":["GET","POST","PUT","PATCH","DELETE"],"default":"GET"},
+                "method":{"type":"string","enum":["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"],"default":"GET"},
                 "path":{"type":"string","description":"Route relative to /wp-json/, e.g. wp/v2/types/blog or rankmath/v1/updateMeta"},
                 "query":{"type":"object","description":"Query parameters (CLI: repeatable --query key=value)"},
                 "body":{"description":"JSON request body (CLI: --data '<json>' or --json for stdin)"}

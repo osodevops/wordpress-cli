@@ -134,3 +134,40 @@ async fn request_raw_maps_wordpress_errors() {
         "{err:?}"
     );
 }
+
+#[tokio::test]
+async fn request_raw_head_without_body_yields_null_and_headers() {
+    let server = MockServer::start().await;
+    Mock::given(method("HEAD"))
+        .and(path("/wp-json/wp/v2/posts"))
+        .respond_with(ResponseTemplate::new(200).insert_header("x-wp-total", "12"))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = client_for(&server);
+    let resp = client
+        .request_raw("HEAD", "wp/v2/posts", &[], None)
+        .await
+        .unwrap();
+    assert!(resp.data.is_null());
+    assert_eq!(resp.total, Some(12));
+}
+
+#[tokio::test]
+async fn request_raw_no_content_yields_null() {
+    let server = MockServer::start().await;
+    Mock::given(method("DELETE"))
+        .and(path("/wp-json/custom/v1/cache"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = client_for(&server);
+    let resp = client
+        .request_raw("DELETE", "custom/v1/cache", &[], None)
+        .await
+        .unwrap();
+    assert!(resp.data.is_null());
+}

@@ -182,7 +182,7 @@ Every write honours `--dry-run`.
 | `--site <name>` | `WPX_SITE` | `default` | Target site profile name |
 | `--url <url>` | `WPX_URL` | -- | Direct URL override (skips profile lookup) |
 | `--output <fmt>` | `WPX_OUTPUT` | `auto` | Output format: `json`, `table`, `csv`, `yaml`, `ndjson`, `auto` |
-| `--fields <f1,f2>` | -- | -- | Comma-separated field mask to reduce output |
+| `--fields <f1,f2>` | -- | -- | Comma-separated field mask to reduce output; dotted paths select nested keys (`content.raw`, `acf.hero.title`) |
 | `--no-color` | `NO_COLOR` | -- | Disable colored output |
 | `--no-prompt` | `WPX_NO_PROMPT` | -- | Disable all interactive prompts |
 | `--quiet` | -- | -- | Suppress non-essential output |
