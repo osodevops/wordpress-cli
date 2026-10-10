@@ -37,7 +37,7 @@ brew install osodevops/tap/wordpress-cli
 **Cargo** (from source):
 
 ```bash
-cargo install --git https://github.com/osodevops/wordpress-cli wpx-cli
+cargo install --git https://github.com/osodevops/wordpress-cli wpx
 ```
 
 **Binary download** -- grab the latest release for your platform from the [Releases](https://github.com/osodevops/wordpress-cli/releases) page.
