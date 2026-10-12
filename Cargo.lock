@@ -2251,7 +2251,7 @@ checksum = "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
 
 [[package]]
 name = "wpx"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -2274,7 +2274,7 @@ dependencies = [
 
 [[package]]
 name = "wpx-api"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "reqwest",
  "serde",
@@ -2290,7 +2290,7 @@ dependencies = [
 
 [[package]]
 name = "wpx-auth"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "open",
@@ -2308,7 +2308,7 @@ dependencies = [
 
 [[package]]
 name = "wpx-config"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2321,7 +2321,7 @@ dependencies = [
 
 [[package]]
 name = "wpx-core"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -2332,7 +2332,7 @@ dependencies = [
 
 [[package]]
 name = "wpx-output"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "csv",

@@ -372,7 +372,7 @@ wpx binary (6 crates)
 └── wpx-output    JSON, Table, CSV, YAML, NDJSON rendering
 ```
 
-All crates share a workspace version (`0.1.0`) and are published together.
+All crates share a workspace version (`0.3.0`) and are published together.
 
 ## Building from Source
 
